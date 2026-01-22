@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle, Bell } from 'lucide-react';
 
 // IMPORTANT: Replace with your Google Sheets Web App URL
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
@@ -13,6 +13,7 @@ const LoanManagementSystem = () => {
   const [loans, setLoans] = useState([]);
   const [payments, setPayments] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedBorrower, setSelectedBorrower] = useState(null);
 
@@ -24,12 +25,13 @@ const LoanManagementSystem = () => {
     if (type === 'interest-only') {
       const monthlyInterest = (principal * rate) / 100;
       for (let i = 1; i <= term; i++) {
+        const isLastMonth = i === term;
         schedule.push({
           month: i,
-          payment: i === term ? principal + monthlyInterest : monthlyInterest,
-          principal: i === term ? principal : 0,
+          payment: isLastMonth ? principal + monthlyInterest : monthlyInterest,
+          principal: isLastMonth ? principal : 0,
           interest: monthlyInterest,
-          balance: i === term ? 0 : principal,
+          balance: isLastMonth ? 0 : principal,
           dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
           status: 'pending'
         });
@@ -81,17 +83,25 @@ const LoanManagementSystem = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [borrowersRes, loansRes, paymentsRes, messagesRes] = await Promise.all([
-        fetch(`${GOOGLE_SHEETS_URL}?action=getBorrowers`).then(r => r.json()),
-        fetch(`${GOOGLE_SHEETS_URL}?action=getLoans`).then(r => r.json()),
-        fetch(`${GOOGLE_SHEETS_URL}?action=getPayments`).then(r => r.json()),
-        fetch(`${GOOGLE_SHEETS_URL}?action=getMessages`).then(r => r.json())
+      const [borrowersRes, loansRes, paymentsRes, messagesRes, applicationsRes] = await Promise.all([
+        fetch(`${GOOGLE_SHEETS_URL}?action=getBorrowers`).then(r => r.json()).catch(() => []),
+        fetch(`${GOOGLE_SHEETS_URL}?action=getLoans`).then(r => r.json()).catch(() => []),
+        fetch(`${GOOGLE_SHEETS_URL}?action=getPayments`).then(r => r.json()).catch(() => []),
+        fetch(`${GOOGLE_SHEETS_URL}?action=getMessages`).then(r => r.json()).catch(() => []),
+        fetch(`${GOOGLE_SHEETS_URL}?action=getApplications`).then(r => r.json()).catch(() => [])
       ]);
       
       setBorrowers(borrowersRes || []);
       setLoans(loansRes || []);
       setPayments(paymentsRes || []);
       setMessages(messagesRes || []);
+      setApplications(applicationsRes || []);
+      
+      // Update selected borrower if it exists
+      if (selectedBorrower) {
+        const updated = borrowersRes.find(b => b.id === selectedBorrower.id);
+        if (updated) setSelectedBorrower(updated);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -102,10 +112,12 @@ const LoanManagementSystem = () => {
     if (currentUser) loadData();
   }, [currentUser]);
 
-  // Auto-refresh messages every 5 seconds when on profile
+  // Auto-refresh messages every 5 seconds when on messages tab
   useEffect(() => {
     if (selectedBorrower && profileTab === 'messages') {
-      const interval = setInterval(loadData, 5000);
+      const interval = setInterval(() => {
+        loadData();
+      }, 5000);
       return () => clearInterval(interval);
     }
   }, [selectedBorrower, profileTab]);
@@ -117,7 +129,6 @@ const LoanManagementSystem = () => {
     const outstanding = totalLoaned - totalPaid;
     const collectionRate = totalLoaned > 0 ? (totalPaid / totalLoaned) * 100 : 0;
     
-    // Calculate additional stats
     const paidPayments = payments.filter(p => p.status === 'completed').length;
     const totalPaymentsDue = loans.reduce((sum, l) => sum + parseInt(l.term || 0), 0);
     const onTimeRate = totalPaymentsDue > 0 ? (paidPayments / totalPaymentsDue) * 100 : 0;
@@ -130,14 +141,15 @@ const LoanManagementSystem = () => {
       activeBorrowers: borrowers.length, 
       activeLoans: loans.filter(l => l.status === 'active').length,
       onTimeRate,
-      totalPayments: paidPayments
+      totalPayments: paidPayments,
+      pendingApplications: applications.filter(a => a.status === 'pending').length
     };
   };
 
   // Update borrower photo
   const updateBorrowerPhoto = async (borrowerId, photoData) => {
     try {
-      await fetch(GOOGLE_SHEETS_URL, {
+      const response = await fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'updateBorrower',
@@ -148,9 +160,13 @@ const LoanManagementSystem = () => {
         })
       });
       
+      const result = await response.json();
+      console.log('Photo update result:', result);
+      
       await loadData();
       alert('✅ Photo updated successfully!');
     } catch (error) {
+      console.error('Error updating photo:', error);
       alert('Error updating photo: ' + error.message);
     }
   };
@@ -193,6 +209,11 @@ const LoanManagementSystem = () => {
   // Send message
   const sendMessage = async (messageText, attachment) => {
     try {
+      if (!messageText.trim() && !attachment) {
+        alert('Please type a message or attach a file');
+        return false;
+      }
+
       const message = {
         id: `MSG${Date.now()}`,
         senderid: currentUser.id,
@@ -216,12 +237,103 @@ const LoanManagementSystem = () => {
       const result = await response.json();
       console.log('Message result:', result);
       
-      await loadData();
-      return true;
+      if (result.success) {
+        await loadData();
+        return true;
+      } else {
+        alert('Failed to send message');
+        return false;
+      }
     } catch (error) {
       console.error('Message error:', error);
-      alert('Error: ' + error.message);
+      alert('Error sending message: ' + error.message);
       return false;
+    }
+  };
+
+  // Submit loan application
+  const submitLoanApplication = async (applicationData) => {
+    try {
+      const application = {
+        id: `APP${Date.now()}`,
+        borrowerId: currentUser.id,
+        borrowerName: currentUser.name,
+        amount: applicationData.amount,
+        purpose: applicationData.purpose,
+        term: applicationData.term,
+        income: applicationData.income,
+        employment: applicationData.employment,
+        timestamp: new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      const response = await fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'submitApplication',
+          data: application
+        })
+      });
+      
+      const result = await response.json();
+      
+      await loadData();
+      return result.success;
+    } catch (error) {
+      console.error('Application error:', error);
+      return false;
+    }
+  };
+
+  // Approve loan application
+  const approveLoanApplication = async (application, rate, type) => {
+    try {
+      const borrowerId = application.borrowerid;
+      const loanId = `LN${Date.now().toString().slice(-4)}`;
+
+      // Calculate schedule
+      const schedule = calculateMonthlyPayment(
+        parseFloat(application.amount),
+        parseFloat(rate),
+        parseInt(application.term),
+        type
+      );
+
+      // Add Loan
+      await fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'addLoan',
+          data: {
+            id: loanId,
+            borrowerId: borrowerId,
+            type: type,
+            principal: parseFloat(application.amount),
+            rate: parseFloat(rate),
+            term: parseInt(application.term),
+            startDate: new Date().toISOString().split('T')[0],
+            status: 'active',
+            schedule: JSON.stringify(schedule)
+          }
+        })
+      });
+
+      // Update application status
+      await fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateApplication',
+          data: {
+            id: application.id,
+            status: 'approved'
+          }
+        })
+      });
+
+      await loadData();
+      alert('✅ Loan application approved!');
+    } catch (error) {
+      alert('Error: ' + error.message);
     }
   };
 
@@ -340,7 +452,6 @@ const LoanManagementSystem = () => {
         const borrowerId = `BRW${Date.now().toString().slice(-3)}`;
         const loanId = `LN${Date.now().toString().slice(-4)}`;
 
-        // Calculate schedule
         const schedule = calculateMonthlyPayment(
           parseFloat(formData.principal),
           parseFloat(formData.rate),
@@ -348,7 +459,6 @@ const LoanManagementSystem = () => {
           formData.type
         );
 
-        // Add Borrower
         await fetch(GOOGLE_SHEETS_URL, {
           method: 'POST',
           body: JSON.stringify({
@@ -364,7 +474,6 @@ const LoanManagementSystem = () => {
           })
         });
 
-        // Add Loan
         await fetch(GOOGLE_SHEETS_URL, {
           method: 'POST',
           body: JSON.stringify({
@@ -436,6 +545,120 @@ const LoanManagementSystem = () => {
     );
   };
 
+  // Loan Application Form
+  const LoanApplicationForm = ({ onSuccess }) => {
+    const [formData, setFormData] = useState({
+      amount: '', purpose: '', term: '3', income: '', employment: ''
+    });
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!formData.amount || !formData.purpose || !formData.income || !formData.employment) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      setSubmitting(true);
+      const success = await submitLoanApplication(formData);
+      if (success) {
+        alert('✅ Loan application submitted successfully! Please wait for admin approval.');
+        setFormData({ amount: '', purpose: '', term: '3', income: '', employment: '' });
+        if (onSuccess) onSuccess();
+      } else {
+        alert('❌ Failed to submit application. Please try again.');
+      }
+      setSubmitting(false);
+    };
+
+    return (
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <FileText size={28} className="text-blue-600" />
+          Apply for New Loan
+        </h3>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Loan Amount *</label>
+              <input 
+                type="number" 
+                placeholder="Enter amount" 
+                value={formData.amount} 
+                onChange={(e) => setFormData({...formData, amount: e.target.value})} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Purpose *</label>
+              <textarea 
+                placeholder="Describe the purpose of this loan" 
+                value={formData.purpose} 
+                onChange={(e) => setFormData({...formData, purpose: e.target.value})} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                rows="3"
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Preferred Term</label>
+              <select 
+                value={formData.term} 
+                onChange={(e) => setFormData({...formData, term: e.target.value})} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option value="3">3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12">12 Months</option>
+                <option value="24">24 Months</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Monthly Income *</label>
+              <input 
+                type="number" 
+                placeholder="Enter monthly income" 
+                value={formData.income} 
+                onChange={(e) => setFormData({...formData, income: e.target.value})} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                required 
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Employment Status *</label>
+              <input 
+                type="text" 
+                placeholder="e.g., Full-time, Self-employed" 
+                value={formData.employment} 
+                onChange={(e) => setFormData({...formData, employment: e.target.value})} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" 
+                required 
+              />
+            </div>
+          </div>
+          <button 
+            type="submit" 
+            disabled={submitting} 
+            className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg flex items-center justify-center gap-2"
+          >
+            {submitting ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send size={20} />
+                Submit Application
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+    );
+  };
+
   // Borrower Profile View
   const BorrowerProfileView = () => {
     const borrower = selectedBorrower;
@@ -445,13 +668,16 @@ const LoanManagementSystem = () => {
     const borrowerMessages = messages.filter(m => 
       (m.senderid === borrower.id && m.receiverid === 'admin') ||
       (m.senderid === 'admin' && m.receiverid === borrower.id)
-    );
+    ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    const borrowerApplications = applications.filter(a => a.borrowerid === borrower.id);
 
     const [newMessage, setNewMessage] = useState('');
     const [attachment, setAttachment] = useState(null);
     const [attachmentName, setAttachmentName] = useState('');
     const [paymentProofs, setPaymentProofs] = useState({});
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [sendingMessage, setSendingMessage] = useState(false);
 
     let schedule = [];
     if (loan && loan.schedule) {
@@ -467,6 +693,10 @@ const LoanManagementSystem = () => {
     const handlePhotoUpload = async (e) => {
       const file = e.target.files[0];
       if (file) {
+        if (file.size > 5000000) {
+          alert('File too large. Please upload an image smaller than 5MB');
+          return;
+        }
         setUploadingPhoto(true);
         const reader = new FileReader();
         reader.onloadend = async () => {
@@ -480,6 +710,10 @@ const LoanManagementSystem = () => {
     const handleFileUpload = (e, isMessage = true, monthNum = null) => {
       const file = e.target.files[0];
       if (file) {
+        if (file.size > 5000000) {
+          alert('File too large. Please upload a file smaller than 5MB');
+          return;
+        }
         const reader = new FileReader();
         reader.onloadend = () => {
           if (isMessage) {
@@ -499,12 +733,14 @@ const LoanManagementSystem = () => {
         return;
       }
       
+      setSendingMessage(true);
       const success = await sendMessage(newMessage, attachment);
       if (success) {
         setNewMessage('');
         setAttachment(null);
         setAttachmentName('');
       }
+      setSendingMessage(false);
     };
 
     const handleMarkAsPaid = async (month, amount) => {
@@ -523,6 +759,9 @@ const LoanManagementSystem = () => {
     const totalPaid = borrowerPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
     const totalLoan = loan ? parseFloat(loan.principal) : 0;
     const progress = totalLoan > 0 ? (totalPaid / totalLoan) * 100 : 0;
+
+    // Get next due date
+    const nextDue = schedule.find(s => !paidMonths.includes(s.month));
 
     return (
       <div className="min-h-screen bg-gray-50">
@@ -555,27 +794,26 @@ const LoanManagementSystem = () => {
                       {borrower.name.charAt(0)}
                     </div>
                   )}
-                  {currentUser.type === 'borrower' && (
-                    <>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                        id="photo-upload"
-                      />
-                      <label
-                        htmlFor="photo-upload"
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-all shadow-lg"
-                      >
-                        {uploadingPhoto ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          <Camera size={16} className="text-white" />
-                        )}
-                      </label>
-                    </>
-                  )}
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                      id="photo-upload"
+                    />
+                    <label
+                      htmlFor="photo-upload"
+                      className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-all shadow-lg"
+                      title="Upload photo"
+                    >
+                      {uploadingPhoto ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      ) : (
+                        <Camera size={16} className="text-white" />
+                      )}
+                    </label>
+                  </>
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold">{borrower.name}</h1>
@@ -594,10 +832,18 @@ const LoanManagementSystem = () => {
               )}
             </div>
 
-            {/* Progress Bar */}
+            {/* Progress Bar & Next Due */}
             <div className="mt-6 bg-white/10 backdrop-blur-lg rounded-lg p-4">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-semibold">Payment Progress</span>
+              <div className="flex justify-between items-center mb-3">
+                <div>
+                  <span className="text-sm font-semibold">Payment Progress</span>
+                  {nextDue && (
+                    <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
+                      <Clock size={14} />
+                      Next due: {new Date(nextDue.dueDate).toLocaleDateString()} - ₱{nextDue.payment.toFixed(2)}
+                    </p>
+                  )}
+                </div>
                 <span className="text-sm font-bold">{progress.toFixed(1)}%</span>
               </div>
               <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
@@ -620,7 +866,8 @@ const LoanManagementSystem = () => {
                 { id: 'details', label: 'Details', icon: User },
                 { id: 'payments', label: 'Payments', icon: CreditCard },
                 { id: 'history', label: 'History', icon: History },
-                { id: 'messages', label: 'Messages', icon: MessageSquare, badge: borrowerMessages.filter(m => !m.read && m.receiverid === currentUser.id).length }
+                { id: 'messages', label: 'Messages', icon: MessageSquare, badge: borrowerMessages.filter(m => !m.read && m.receiverid === currentUser.id).length },
+                ...(currentUser.type === 'borrower' ? [{ id: 'apply', label: 'Apply Loan', icon: FileText }] : [])
               ].map(tab => (
                 <button 
                   key={tab.id} 
@@ -639,7 +886,7 @@ const LoanManagementSystem = () => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* Profile Details Tab */}
+          {/* Details Tab */}
           {profileTab === 'details' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl shadow-lg p-6">
@@ -724,25 +971,34 @@ const LoanManagementSystem = () => {
                   const isPaid = paidMonths.includes(payment.month);
                   const paymentRecord = borrowerPayments.find(p => parseInt(p.month) === payment.month);
                   const hasProof = paymentProofs[payment.month];
+                  const isOverdue = new Date(payment.dueDate) < new Date() && !isPaid;
                   
                   return (
-                    <div key={idx} className={`border-2 rounded-xl p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : 'bg-white border-gray-200 hover:shadow-md'}`}>
+                    <div key={idx} className={`border-2 rounded-xl p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : isOverdue ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:shadow-md'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isPaid ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isPaid ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`}>
                             {isPaid ? (
                               <CheckCircle size={28} className="text-white" />
+                            ) : isOverdue ? (
+                              <AlertCircle size={28} className="text-white" />
                             ) : (
                               <span className="text-white font-bold text-xl">{payment.month}</span>
                             )}
                           </div>
                           <div>
                             <p className="font-bold text-gray-900 text-lg">Payment #{payment.month}</p>
-                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <p className={`text-sm flex items-center gap-1 ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               <Calendar size={14} />
                               Due: {new Date(payment.dueDate).toLocaleDateString()}
+                              {isOverdue && <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded">OVERDUE</span>}
                             </p>
                             <p className="text-2xl font-bold text-gray-900 mt-1">₱{payment.payment.toFixed(2)}</p>
+                            {payment.month === schedule.length && (
+                              <p className="text-xs text-purple-600 font-semibold mt-1">
+                                Includes principal: ₱{parseFloat(loan.principal).toFixed(2)}
+                              </p>
+                            )}
                             {isPaid && paymentRecord && (
                               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <Check size={12} />
@@ -796,8 +1052,8 @@ const LoanManagementSystem = () => {
                               )}
                             </div>
                           ) : (
-                            <span className="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-lg font-bold border-2 border-yellow-300">
-                              PENDING
+                            <span className={`px-6 py-3 rounded-lg font-bold border-2 ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                              {isOverdue ? 'OVERDUE' : 'PENDING'}
                             </span>
                           )}
                         </div>
@@ -872,7 +1128,7 @@ const LoanManagementSystem = () => {
                     <p className="text-gray-600 text-lg">No messages yet. Start a conversation!</p>
                   </div>
                 ) : (
-                  borrowerMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(msg => {
+                  borrowerMessages.map(msg => {
                     const isSentByMe = msg.senderid === currentUser.id;
                     return (
                       <div key={msg.id} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -880,7 +1136,7 @@ const LoanManagementSystem = () => {
                           {msg.image && (
                             <div className="mb-3">
                               {msg.image.startsWith('data:image') ? (
-                                <img src={msg.image} alt="Attachment" className="max-w-full rounded-lg mb-2" />
+                                <img src={msg.image} alt="Attachment" className="max-w-full rounded-lg mb-2 max-h-64 object-contain" />
                               ) : (
                                 <a href={msg.image} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${isSentByMe ? 'text-blue-100' : 'text-blue-600'} hover:underline font-semibold`}>
                                   <Paperclip size={16} />
@@ -889,7 +1145,7 @@ const LoanManagementSystem = () => {
                               )}
                             </div>
                           )}
-                          <p className="break-words text-lg">{msg.message}</p>
+                          {msg.message && <p className="break-words text-lg">{msg.message}</p>}
                           <p className={`text-xs mt-2 ${isSentByMe ? 'text-blue-100' : 'text-gray-500'}`}>
                             {new Date(msg.timestamp).toLocaleString()}
                           </p>
@@ -924,16 +1180,29 @@ const LoanManagementSystem = () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type your message..."
                     className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-lg"
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !sendingMessage) {
+                        handleSendMessage();
+                      }
+                    }}
                   />
                   
                   <button
                     onClick={handleSendMessage}
-                    disabled={!newMessage.trim() && !attachment}
+                    disabled={(!newMessage.trim() && !attachment) || sendingMessage}
                     className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all flex items-center gap-2 shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
-                    <Send size={20} />
-                    Send
+                    {sendingMessage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={20} />
+                        Send
+                      </>
+                    )}
                   </button>
                 </div>
                 
@@ -955,6 +1224,40 @@ const LoanManagementSystem = () => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Apply Loan Tab (Borrower Only) */}
+          {profileTab === 'apply' && currentUser.type === 'borrower' && (
+            <div>
+              <LoanApplicationForm onSuccess={loadData} />
+              
+              {/* Application Status */}
+              {borrowerApplications.length > 0 && (
+                <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Your Applications</h3>
+                  <div className="space-y-3">
+                    {borrowerApplications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(app => (
+                      <div key={app.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                          <p className="font-bold text-gray-900">₱{parseFloat(app.amount).toLocaleString()}</p>
+                          <p className="text-sm text-gray-600">{app.purpose}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Submitted: {new Date(app.timestamp).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span className={`px-4 py-2 rounded-lg font-bold ${
+                          app.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          app.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {app.status.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -996,10 +1299,15 @@ const LoanManagementSystem = () => {
             <div className="flex gap-2">
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: Home },
-                { id: 'borrowers', label: 'Borrowers', icon: Users }
+                { id: 'borrowers', label: 'Borrowers', icon: Users },
+                { id: 'applications', label: 'Applications', icon: Bell, badge: stats.pendingApplications }
               ].map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
-                  <tab.icon size={18} /> {tab.label}
+                  <tab.icon size={18} /> 
+                  {tab.label}
+                  {tab.badge > 0 && (
+                    <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full">{tab.badge}</span>
+                  )}
                 </button>
               ))}
             </div>
@@ -1117,13 +1425,6 @@ const LoanManagementSystem = () => {
                   <div className="bg-white rounded-xl shadow-lg p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-between">
                       <span>All Borrowers ({borrowers.length})</span>
-                      <button
-                        onClick={exportToCSV}
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center gap-2"
-                      >
-                        <Download size={18} />
-                        Export CSV
-                      </button>
                     </h3>
                     
                     {borrowers.length === 0 ? (
@@ -1185,43 +1486,124 @@ const LoanManagementSystem = () => {
                   </div>
                 </div>
               )}
+
+              {activeTab === 'applications' && (
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Loan Applications</h2>
+                  
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      Pending Applications ({applications.filter(a => a.status === 'pending').length})
+                    </h3>
+                    
+                    {applications.filter(a => a.status === 'pending').length === 0 ? (
+                      <div className="text-center py-12">
+                        <Bell size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-600 text-lg">No pending applications</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {applications.filter(a => a.status === 'pending').map(app => {
+                          const [rate, setRate] = useState('5');
+                          const [type, setType] = useState('interest-only');
+                          
+                          return (
+                            <div key={app.id} className="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6">
+                              <div className="flex items-start justify-between mb-4">
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-xl text-gray-900">{app.borrowername}</h4>
+                                  <p className="text-sm text-gray-600">Borrower ID: {app.borrowerid}</p>
+                                  <p className="text-2xl font-bold text-gray-900 mt-2">₱{parseFloat(app.amount).toLocaleString()}</p>
+                                  <p className="text-sm text-gray-600 mt-1">Term: {app.term} months</p>
+                                  <div className="mt-3 p-3 bg-white rounded-lg">
+                                    <p className="text-sm font-semibold text-gray-700">Purpose:</p>
+                                    <p className="text-gray-900">{app.purpose}</p>
+                                  </div>
+                                  <div className="mt-2 grid grid-cols-2 gap-4">
+                                    <div className="p-3 bg-white rounded-lg">
+                                      <p className="text-sm font-semibold text-gray-700">Monthly Income:</p>
+                                      <p className="text-gray-900">₱{parseFloat(app.income).toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-3 bg-white rounded-lg">
+                                      <p className="text-sm font-semibold text-gray-700">Employment:</p>
+                                      <p className="text-gray-900">{app.employment}</p>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-3">
+                                    Applied: {new Date(app.timestamp).toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-4 p-4 bg-white rounded-lg">
+                                <h5 className="font-bold text-gray-900 mb-3">Approve Loan:</h5>
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Interest Rate (%)</label>
+                                    <input 
+                                      type="number" 
+                                      step="0.1"
+                                      value={rate} 
+                                      onChange={(e) => setRate(e.target.value)} 
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Loan Type</label>
+                                    <select 
+                                      value={type} 
+                                      onChange={(e) => setType(e.target.value)} 
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                                    >
+                                      <option value="interest-only">Interest Only</option>
+                                      <option value="amortized">Amortized</option>
+                                      <option value="staggered">Staggered</option>
+                                    </select>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => approveLoanApplication(app, rate, type)}
+                                  className="w-full px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
+                                >
+                                  Approve Application
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* All Applications */}
+                  <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">All Applications</h3>
+                    <div className="space-y-3">
+                      {applications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(app => (
+                        <div key={app.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div>
+                            <p className="font-bold text-gray-900">{app.borrowername}</p>
+                            <p className="text-sm text-gray-600">₱{parseFloat(app.amount).toLocaleString()} • {app.term} months</p>
+                            <p className="text-xs text-gray-500">{new Date(app.timestamp).toLocaleDateString()}</p>
+                          </div>
+                          <span className={`px-4 py-2 rounded-lg font-bold ${
+                            app.status === 'approved' ? 'bg-green-100 text-green-700' :
+                            app.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {app.status.toUpperCase()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
       </div>
     );
-  };
-
-  // Export CSV function
-  const exportToCSV = () => {
-    const csvData = borrowers.map(b => {
-      const borrowerLoans = loans.filter(l => l.borrowerid === b.id);
-      const borrowerPayments = payments.filter(p => p.borrowerid === b.id);
-      const totalBorrowed = borrowerLoans.reduce((sum, l) => sum + parseFloat(l.principal || 0), 0);
-      const totalPaid = borrowerPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-      
-      return {
-        ID: b.id,
-        Name: b.name,
-        Email: b.email,
-        Phone: b.contact,
-        TotalBorrowed: totalBorrowed,
-        TotalPaid: totalPaid,
-        Outstanding: totalBorrowed - totalPaid,
-        Progress: `${((totalPaid / totalBorrowed) * 100).toFixed(1)}%`
-      };
-    });
-    
-    const headers = Object.keys(csvData[0] || {}).join(',');
-    const rows = csvData.map(row => Object.values(row).join(',')).join('\n');
-    const csv = headers + '\n' + rows;
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `borrowers-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
   };
 
   // Main Render
