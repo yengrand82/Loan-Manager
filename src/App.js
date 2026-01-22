@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare } from 'lucide-react';
+import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 // IMPORTANT: Replace with your Google Sheets Web App URL
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
@@ -8,6 +8,7 @@ const LoanManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentView, setCurrentView] = useState('login');
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [profileTab, setProfileTab] = useState('details');
   const [borrowers, setBorrowers] = useState([]);
   const [loans, setLoans] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -101,6 +102,14 @@ const LoanManagementSystem = () => {
     if (currentUser) loadData();
   }, [currentUser]);
 
+  // Auto-refresh messages every 5 seconds when on profile
+  useEffect(() => {
+    if (selectedBorrower && profileTab === 'messages') {
+      const interval = setInterval(loadData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedBorrower, profileTab]);
+
   // Calculate statistics
   const getStats = () => {
     const totalLoaned = loans.reduce((sum, l) => sum + parseFloat(l.principal || 0), 0);
@@ -108,7 +117,42 @@ const LoanManagementSystem = () => {
     const outstanding = totalLoaned - totalPaid;
     const collectionRate = totalLoaned > 0 ? (totalPaid / totalLoaned) * 100 : 0;
     
-    return { totalLoaned, totalPaid, outstanding, collectionRate, activeBorrowers: borrowers.length, activeLoans: loans.length };
+    // Calculate additional stats
+    const paidPayments = payments.filter(p => p.status === 'completed').length;
+    const totalPaymentsDue = loans.reduce((sum, l) => sum + parseInt(l.term || 0), 0);
+    const onTimeRate = totalPaymentsDue > 0 ? (paidPayments / totalPaymentsDue) * 100 : 0;
+    
+    return { 
+      totalLoaned, 
+      totalPaid, 
+      outstanding, 
+      collectionRate, 
+      activeBorrowers: borrowers.length, 
+      activeLoans: loans.filter(l => l.status === 'active').length,
+      onTimeRate,
+      totalPayments: paidPayments
+    };
+  };
+
+  // Update borrower photo
+  const updateBorrowerPhoto = async (borrowerId, photoData) => {
+    try {
+      await fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'updateBorrower',
+          data: {
+            id: borrowerId,
+            photo: photoData
+          }
+        })
+      });
+      
+      await loadData();
+      alert('✅ Photo updated successfully!');
+    } catch (error) {
+      alert('Error updating photo: ' + error.message);
+    }
   };
 
   // Mark payment as paid
@@ -125,7 +169,7 @@ const LoanManagementSystem = () => {
         status: 'completed'
       };
       
-      await fetch(GOOGLE_SHEETS_URL, {
+      const response = await fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'addPayment',
@@ -133,10 +177,16 @@ const LoanManagementSystem = () => {
         })
       });
       
+      const result = await response.json();
+      console.log('Payment result:', result);
+      
       await loadData();
       alert('✅ Payment marked as paid!');
+      return true;
     } catch (error) {
+      console.error('Payment error:', error);
       alert('Error: ' + error.message);
+      return false;
     }
   };
 
@@ -153,7 +203,9 @@ const LoanManagementSystem = () => {
         read: false
       };
       
-      await fetch(GOOGLE_SHEETS_URL, {
+      console.log('Sending message:', message);
+      
+      const response = await fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'sendMessage',
@@ -161,9 +213,15 @@ const LoanManagementSystem = () => {
         })
       });
       
+      const result = await response.json();
+      console.log('Message result:', result);
+      
       await loadData();
+      return true;
     } catch (error) {
+      console.error('Message error:', error);
       alert('Error: ' + error.message);
+      return false;
     }
   };
 
@@ -183,7 +241,7 @@ const LoanManagementSystem = () => {
           setSelectedBorrower(borrower);
           setCurrentView('borrower-profile');
         } else {
-          alert('Invalid credentials');
+          alert('Invalid credentials. Please check your Borrower ID.');
         }
       }
     };
@@ -223,7 +281,7 @@ const LoanManagementSystem = () => {
               type={userType === 'admin' ? 'password' : 'text'}
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              placeholder={userType === 'admin' ? 'Enter password' : 'Enter Borrower ID'}
+              placeholder={userType === 'admin' ? 'Enter password' : 'Enter Borrower ID (e.g., BRW001)'}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             />
@@ -245,16 +303,19 @@ const LoanManagementSystem = () => {
   };
 
   // Statistics Card
-  const StatCard = ({ title, value, icon: Icon, color, trend }) => (
-    <div className="bg-white rounded-xl shadow-sm p-6 border-l-4 hover:shadow-md transition-all" style={{ borderColor: color }}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
+  const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 hover:shadow-xl transition-all transform hover:-translate-y-1" style={{ borderColor: color }}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
           <p className="text-3xl font-bold text-gray-900">{value}</p>
-          {trend && <p className="text-sm text-green-600 mt-1">{trend}</p>}
+          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          {trend && <p className="text-sm font-semibold text-green-600 mt-2 flex items-center gap-1">
+            <TrendingUp size={14} /> {trend}
+          </p>}
         </div>
-        <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
-          <Icon size={28} style={{ color: color }} />
+        <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: `${color}20` }}>
+          <Icon size={32} style={{ color: color }} />
         </div>
       </div>
     </div>
@@ -292,7 +353,14 @@ const LoanManagementSystem = () => {
           method: 'POST',
           body: JSON.stringify({
             action: 'addBorrower',
-            data: { id: borrowerId, name: formData.name, contact: formData.contact, address: '', email: formData.email }
+            data: { 
+              id: borrowerId, 
+              name: formData.name, 
+              contact: formData.contact, 
+              address: '', 
+              email: formData.email,
+              photo: ''
+            }
           })
         });
 
@@ -326,8 +394,11 @@ const LoanManagementSystem = () => {
     };
 
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Add New Borrower</h3>
+      <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Plus size={24} className="text-blue-600" />
+          Add New Borrower
+        </h3>
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <input type="text" placeholder="Full Name *" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" required />
@@ -339,6 +410,7 @@ const LoanManagementSystem = () => {
               <option value="3">3 Months</option>
               <option value="6">6 Months</option>
               <option value="12">12 Months</option>
+              <option value="24">24 Months</option>
             </select>
             <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
               <option value="interest-only">Interest Only</option>
@@ -346,8 +418,18 @@ const LoanManagementSystem = () => {
               <option value="staggered">Staggered</option>
             </select>
           </div>
-          <button type="submit" disabled={saving} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg">
-            {saving ? 'Adding...' : 'Add Borrower'}
+          <button type="submit" disabled={saving} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg flex items-center justify-center gap-2">
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Adding...
+              </>
+            ) : (
+              <>
+                <Plus size={20} />
+                Add Borrower
+              </>
+            )}
           </button>
         </form>
       </div>
@@ -367,8 +449,9 @@ const LoanManagementSystem = () => {
 
     const [newMessage, setNewMessage] = useState('');
     const [attachment, setAttachment] = useState(null);
-    const [showPaymentProof, setShowPaymentProof] = useState(null);
-    const [uploadingProof, setUploadingProof] = useState(false);
+    const [attachmentName, setAttachmentName] = useState('');
+    const [paymentProofs, setPaymentProofs] = useState({});
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
     let schedule = [];
     if (loan && loan.schedule) {
@@ -381,15 +464,29 @@ const LoanManagementSystem = () => {
 
     const paidMonths = borrowerPayments.map(p => parseInt(p.month));
 
-    const handleFileUpload = (e, isMessage = true) => {
+    const handlePhotoUpload = async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        setUploadingPhoto(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          await updateBorrowerPhoto(borrower.id, reader.result);
+          setUploadingPhoto(false);
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    const handleFileUpload = (e, isMessage = true, monthNum = null) => {
       const file = e.target.files[0];
       if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
           if (isMessage) {
             setAttachment(reader.result);
+            setAttachmentName(file.name);
           } else {
-            setShowPaymentProof(reader.result);
+            setPaymentProofs({...paymentProofs, [monthNum]: reader.result});
           }
         };
         reader.readAsDataURL(file);
@@ -397,23 +494,30 @@ const LoanManagementSystem = () => {
     };
 
     const handleSendMessage = async () => {
-      if (!newMessage.trim() && !attachment) return;
+      if (!newMessage.trim() && !attachment) {
+        alert('Please type a message or attach a file');
+        return;
+      }
       
-      await sendMessage(newMessage, attachment);
-      setNewMessage('');
-      setAttachment(null);
+      const success = await sendMessage(newMessage, attachment);
+      if (success) {
+        setNewMessage('');
+        setAttachment(null);
+        setAttachmentName('');
+      }
     };
 
     const handleMarkAsPaid = async (month, amount) => {
-      if (!showPaymentProof) {
+      const proof = paymentProofs[month];
+      if (!proof) {
         alert('Please upload payment proof first');
         return;
       }
       
-      setUploadingProof(true);
-      await markPaymentAsPaid(loan.id, month, amount, showPaymentProof);
-      setShowPaymentProof(null);
-      setUploadingProof(false);
+      const success = await markPaymentAsPaid(loan.id, month, amount, proof);
+      if (success) {
+        setPaymentProofs({...paymentProofs, [month]: null});
+      }
     };
 
     const totalPaid = borrowerPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
@@ -424,10 +528,11 @@ const LoanManagementSystem = () => {
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="max-w-7xl mx-auto px-6 py-6">
             <button 
               onClick={() => {
                 setSelectedBorrower(null);
+                setProfileTab('details');
                 if (currentUser.type === 'borrower') {
                   setCurrentUser(null);
                   setCurrentView('login');
@@ -441,147 +546,258 @@ const LoanManagementSystem = () => {
               Back
             </button>
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold">{borrower.name}</h1>
-                <p className="text-blue-100">ID: {borrower.id}</p>
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  {borrower.photo ? (
+                    <img src={borrower.photo} alt={borrower.name} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" />
+                  ) : (
+                    <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center text-4xl font-bold border-4 border-white shadow-lg">
+                      {borrower.name.charAt(0)}
+                    </div>
+                  )}
+                  {currentUser.type === 'borrower' && (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <label
+                        htmlFor="photo-upload"
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition-all shadow-lg"
+                      >
+                        {uploadingPhoto ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        ) : (
+                          <Camera size={16} className="text-white" />
+                        )}
+                      </label>
+                    </>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">{borrower.name}</h1>
+                  <p className="text-blue-100 text-lg">ID: {borrower.id}</p>
+                  {loan && (
+                    <p className="text-blue-100 mt-1">
+                      ₱{parseFloat(loan.principal).toLocaleString()} @ {loan.rate}% • {loan.term} months
+                    </p>
+                  )}
+                </div>
               </div>
               {currentUser.type === 'borrower' && (
-                <button onClick={() => { setCurrentUser(null); setCurrentView('login'); }} className="px-4 py-2 bg-white/20 backdrop-blur-lg text-white rounded-lg hover:bg-white/30 transition-all flex items-center gap-2">
+                <button onClick={() => { setCurrentUser(null); setCurrentView('login'); }} className="px-6 py-3 bg-white/20 backdrop-blur-lg text-white rounded-lg hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg">
                   <LogOut size={18} /> Logout
                 </button>
               )}
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mt-6 bg-white/10 backdrop-blur-lg rounded-lg p-4">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm font-semibold">Payment Progress</span>
+                <span className="text-sm font-bold">{progress.toFixed(1)}%</span>
+              </div>
+              <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-green-400 to-blue-400 transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-sm">
+                <span>Paid: ₱{totalPaid.toLocaleString()}</span>
+                <span>Remaining: ₱{(totalLoan - totalPaid).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex gap-2">
+              {[
+                { id: 'details', label: 'Details', icon: User },
+                { id: 'payments', label: 'Payments', icon: CreditCard },
+                { id: 'history', label: 'History', icon: History },
+                { id: 'messages', label: 'Messages', icon: MessageSquare, badge: borrowerMessages.filter(m => !m.read && m.receiverid === currentUser.id).length }
+              ].map(tab => (
+                <button 
+                  key={tab.id} 
+                  onClick={() => setProfileTab(tab.id)} 
+                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${profileTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                >
+                  <tab.icon size={18} /> 
+                  {tab.label}
+                  {tab.badge > 0 && (
+                    <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full">{tab.badge}</span>
+                  )}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="max-w-7xl mx-auto px-6 py-8">
-          {/* Profile & Loan Details */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Profile & Loan Details</h2>
-            
+          {/* Profile Details Tab */}
+          {profileTab === 'details' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Contact</p>
-                <p className="text-lg font-semibold text-gray-900">{borrower.contact}</p>
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <User size={24} className="text-blue-600" />
+                  Contact Information
+                </h2>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Phone size={20} className="text-blue-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Phone</p>
+                      <p className="font-semibold text-gray-900">{borrower.contact || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Mail size={20} className="text-blue-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Email</p>
+                      <p className="font-semibold text-gray-900">{borrower.email || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <Calendar size={20} className="text-blue-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Member Since</p>
+                      <p className="font-semibold text-gray-900">
+                        {borrower.createddate ? new Date(borrower.createddate).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Email</p>
-                <p className="text-lg font-semibold text-gray-900">{borrower.email || 'N/A'}</p>
-              </div>
-              
+
               {loan && (
-                <>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Loan Amount</p>
-                    <p className="text-2xl font-bold text-gray-900">₱{parseFloat(loan.principal).toLocaleString()}</p>
+                <div className="bg-white rounded-xl shadow-lg p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign size={24} className="text-green-600" />
+                    Loan Summary
+                  </h2>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">Loan Amount</span>
+                      <span className="font-bold text-2xl text-gray-900">₱{parseFloat(loan.principal).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">Interest Rate</span>
+                      <span className="font-bold text-xl text-gray-900">{loan.rate}%</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">Term</span>
+                      <span className="font-bold text-xl text-gray-900">{loan.term} months</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <span className="text-gray-600">Type</span>
+                      <span className="font-bold text-gray-900 capitalize">{loan.type?.replace('-', ' ')}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                      <span className="text-green-700 font-semibold">Total Paid</span>
+                      <span className="font-bold text-2xl text-green-600">₱{totalPaid.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg border border-orange-200">
+                      <span className="text-orange-700 font-semibold">Outstanding</span>
+                      <span className="font-bold text-2xl text-orange-600">₱{(totalLoan - totalPaid).toLocaleString()}</span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Interest Rate</p>
-                    <p className="text-2xl font-bold text-gray-900">{loan.rate}%</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Term</p>
-                    <p className="text-lg font-semibold text-gray-900">{loan.term} months</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Loan Type</p>
-                    <p className="text-lg font-semibold text-gray-900 capitalize">{loan.type?.replace('-', ' ')}</p>
-                  </div>
-                </>
+                </div>
               )}
             </div>
+          )}
 
-            {/* Progress Bar */}
-            <div className="mt-6">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm font-semibold text-gray-700">Payment Progress</span>
-                <span className="text-sm font-bold text-blue-600">{progress.toFixed(1)}%</span>
-              </div>
-              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-sm text-gray-600">
-                <span>Paid: ₱{totalPaid.toLocaleString()}</span>
-                <span>Total: ₱{totalLoan.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Monthly Payments */}
-          {loan && schedule.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Monthly Payments</h2>
+          {/* Payments Tab */}
+          {profileTab === 'payments' && loan && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <CreditCard size={28} className="text-blue-600" />
+                Payment Schedule
+              </h2>
               
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-4">
                 {schedule.map((payment, idx) => {
                   const isPaid = paidMonths.includes(payment.month);
                   const paymentRecord = borrowerPayments.find(p => parseInt(p.month) === payment.month);
+                  const hasProof = paymentProofs[payment.month];
                   
                   return (
-                    <div key={idx} className={`border rounded-lg p-4 transition-all ${isPaid ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <div key={idx} className={`border-2 rounded-xl p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : 'bg-white border-gray-200 hover:shadow-md'}`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isPaid ? 'bg-green-500' : 'bg-gray-300'}`}>
-                            {isPaid ? <Check size={20} className="text-white" /> : <span className="text-white font-bold">{payment.month}</span>}
+                          <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isPaid ? 'bg-green-500' : 'bg-gray-300'}`}>
+                            {isPaid ? (
+                              <CheckCircle size={28} className="text-white" />
+                            ) : (
+                              <span className="text-white font-bold text-xl">{payment.month}</span>
+                            )}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">Month {payment.month}</p>
-                            <p className="text-sm text-gray-600">Due: {new Date(payment.dueDate).toLocaleDateString()}</p>
-                            <p className="text-lg font-semibold text-gray-900">₱{payment.payment.toFixed(2)}</p>
+                            <p className="font-bold text-gray-900 text-lg">Payment #{payment.month}</p>
+                            <p className="text-sm text-gray-600 flex items-center gap-1">
+                              <Calendar size={14} />
+                              Due: {new Date(payment.dueDate).toLocaleDateString()}
+                            </p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">₱{payment.payment.toFixed(2)}</p>
+                            {isPaid && paymentRecord && (
+                              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                <Check size={12} />
+                                Paid on {new Date(paymentRecord.paymentdate).toLocaleDateString()}
+                              </p>
+                            )}
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col items-end gap-2">
                           {isPaid ? (
-                            <div className="text-right">
-                              <span className="px-4 py-2 bg-green-500 text-white rounded-lg font-semibold flex items-center gap-2">
-                                <Check size={16} /> Paid
+                            <div>
+                              <span className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold text-lg shadow-lg flex items-center gap-2">
+                                <CheckCircle size={20} /> PAID
                               </span>
-                              {paymentRecord && paymentRecord.paymentdate && (
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {new Date(paymentRecord.paymentdate).toLocaleDateString()}
-                                </p>
-                              )}
                               {paymentRecord && paymentRecord.proof && (
                                 <button
                                   onClick={() => window.open(paymentRecord.proof, '_blank')}
-                                  className="text-xs text-blue-600 hover:underline mt-1"
+                                  className="mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
                                 >
+                                  <FileText size={14} />
                                   View Proof
                                 </button>
                               )}
                             </div>
                           ) : currentUser.type === 'admin' ? (
-                            <div>
+                            <div className="flex flex-col gap-2">
                               <input
                                 type="file"
                                 accept="image/*,.pdf"
-                                onChange={(e) => handleFileUpload(e, false)}
+                                onChange={(e) => handleFileUpload(e, false, payment.month)}
                                 className="hidden"
                                 id={`proof-${payment.month}`}
                               />
                               <label
                                 htmlFor={`proof-${payment.month}`}
-                                className="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg font-semibold cursor-pointer hover:bg-blue-200 transition-all flex items-center gap-2"
+                                className={`px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center gap-2 ${
+                                  hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                }`}
                               >
-                                <Upload size={16} /> Upload Proof
+                                <Upload size={18} />
+                                {hasProof ? 'Proof Uploaded ✓' : 'Upload Proof'}
                               </label>
-                              {showPaymentProof && (
+                              {hasProof && (
                                 <button
                                   onClick={() => handleMarkAsPaid(payment.month, payment.payment)}
-                                  disabled={uploadingProof}
-                                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-semibold hover:bg-green-600 transition-all disabled:bg-gray-400"
+                                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
                                 >
-                                  {uploadingProof ? 'Marking...' : 'Mark as Paid'}
+                                  Mark as Paid
                                 </button>
                               )}
                             </div>
                           ) : (
-                            <span className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg font-semibold">
-                              Pending
+                            <span className="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-lg font-bold border-2 border-yellow-300">
+                              PENDING
                             </span>
                           )}
                         </div>
@@ -593,83 +809,154 @@ const LoanManagementSystem = () => {
             </div>
           )}
 
-          {/* Messages */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <MessageSquare size={24} />
-              Messages
-            </h2>
-            
-            <div className="space-y-4 mb-4 max-h-96 overflow-y-auto">
-              {borrowerMessages.length === 0 ? (
-                <p className="text-gray-600 text-center py-8">No messages yet. Start a conversation!</p>
+          {/* History Tab */}
+          {profileTab === 'history' && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <History size={28} className="text-purple-600" />
+                Payment History
+              </h2>
+              
+              {borrowerPayments.length === 0 ? (
+                <div className="text-center py-12">
+                  <Clock size={48} className="mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-600 text-lg">No payment history yet</p>
+                </div>
               ) : (
-                borrowerMessages.map(msg => {
-                  const isSentByMe = msg.senderid === currentUser.id;
-                  return (
-                    <div key={msg.id} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-md p-4 rounded-lg ${isSentByMe ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-900'}`}>
-                        {msg.image && (
-                          <div className="mb-2">
-                            <a href={msg.image} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${isSentByMe ? 'text-blue-100' : 'text-blue-600'} hover:underline`}>
-                              <Paperclip size={16} />
-                              Attachment
-                            </a>
-                          </div>
+                <div className="space-y-3">
+                  {borrowerPayments.sort((a, b) => new Date(b.paymentdate) - new Date(a.paymentdate)).map(payment => (
+                    <div key={payment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                          <CheckCircle size={24} className="text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900">Month {payment.month} Payment</p>
+                          <p className="text-sm text-gray-600 flex items-center gap-1">
+                            <Calendar size={14} />
+                            {new Date(payment.paymentdate).toLocaleDateString()} at {new Date(payment.paymentdate).toLocaleTimeString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">₱{parseFloat(payment.amount).toFixed(2)}</p>
+                        {payment.proof && (
+                          <button
+                            onClick={() => window.open(payment.proof, '_blank')}
+                            className="mt-1 text-sm text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <FileText size={14} />
+                            View Proof
+                          </button>
                         )}
-                        <p className="break-words">{msg.message}</p>
-                        <p className={`text-xs mt-2 ${isSentByMe ? 'text-blue-100' : 'text-gray-500'}`}>
-                          {new Date(msg.timestamp).toLocaleString()}
-                        </p>
                       </div>
                     </div>
-                  );
-                })
+                  ))}
+                </div>
               )}
             </div>
+          )}
 
-            {/* Message Input */}
-            <div className="flex gap-2">
-              <input
-                type="file"
-                accept="image/*,.pdf,.doc,.docx"
-                onChange={(e) => handleFileUpload(e, true)}
-                className="hidden"
-                id="message-attachment"
-              />
-              <label
-                htmlFor="message-attachment"
-                className="cursor-pointer p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
-              >
-                <Paperclip size={20} className="text-gray-600" />
-              </label>
+          {/* Messages Tab */}
+          {profileTab === 'messages' && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <MessageSquare size={28} className="text-blue-600" />
+                Messages
+              </h2>
               
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              />
-              
-              <button
-                onClick={handleSendMessage}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-all flex items-center gap-2"
-              >
-                <Send size={18} />
-                Send
-              </button>
-            </div>
-            
-            {attachment && (
-              <div className="mt-2 text-sm text-blue-600 flex items-center gap-2">
-                <Paperclip size={16} />
-                File attached
-                <button onClick={() => setAttachment(null)} className="text-red-500 hover:underline">Remove</button>
+              <div className="space-y-4 mb-6 max-h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
+                {borrowerMessages.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                    <p className="text-gray-600 text-lg">No messages yet. Start a conversation!</p>
+                  </div>
+                ) : (
+                  borrowerMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)).map(msg => {
+                    const isSentByMe = msg.senderid === currentUser.id;
+                    return (
+                      <div key={msg.id} className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}>
+                        <div className={`max-w-md p-4 rounded-2xl shadow-md ${isSentByMe ? 'bg-blue-500 text-white rounded-br-none' : 'bg-white text-gray-900 border border-gray-200 rounded-bl-none'}`}>
+                          {msg.image && (
+                            <div className="mb-3">
+                              {msg.image.startsWith('data:image') ? (
+                                <img src={msg.image} alt="Attachment" className="max-w-full rounded-lg mb-2" />
+                              ) : (
+                                <a href={msg.image} target="_blank" rel="noopener noreferrer" className={`flex items-center gap-2 ${isSentByMe ? 'text-blue-100' : 'text-blue-600'} hover:underline font-semibold`}>
+                                  <Paperclip size={16} />
+                                  View Attachment
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          <p className="break-words text-lg">{msg.message}</p>
+                          <p className={`text-xs mt-2 ${isSentByMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                            {new Date(msg.timestamp).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
-            )}
-          </div>
+
+              {/* Message Input */}
+              <div className="border-t pt-4">
+                <div className="flex gap-3">
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={(e) => handleFileUpload(e, true)}
+                    className="hidden"
+                    id="message-attachment"
+                  />
+                  <label
+                    htmlFor="message-attachment"
+                    className="cursor-pointer p-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-all hover:border-blue-400"
+                    title="Attach file"
+                  >
+                    <Paperclip size={24} className="text-gray-600" />
+                  </label>
+                  
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-lg"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() && !attachment}
+                    className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all flex items-center gap-2 shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    <Send size={20} />
+                    Send
+                  </button>
+                </div>
+                
+                {attachmentName && (
+                  <div className="mt-3 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Paperclip size={16} />
+                      <span className="font-semibold">{attachmentName}</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setAttachment(null);
+                        setAttachmentName('');
+                      }} 
+                      className="text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -686,20 +973,22 @@ const LoanManagementSystem = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-lg flex items-center justify-center">
-                <DollarSign size={28} />
+        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-2xl">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-lg">
+                  <DollarSign size={32} />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+                  <p className="text-sm text-blue-100">Loan Management System</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-                <p className="text-sm text-blue-100">Loan Management System</p>
-              </div>
+              <button onClick={() => { setCurrentUser(null); setCurrentView('login'); }} className="px-6 py-3 bg-white/20 backdrop-blur-lg text-white rounded-lg hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg">
+                <LogOut size={20} /> Logout
+              </button>
             </div>
-            <button onClick={() => { setCurrentUser(null); setCurrentView('login'); }} className="px-4 py-2 bg-white/20 backdrop-blur-lg text-white rounded-lg hover:bg-white/30 transition-all flex items-center gap-2">
-              <LogOut size={18} /> Logout
-            </button>
           </div>
 
           {/* Tabs */}
@@ -721,21 +1010,101 @@ const LoanManagementSystem = () => {
         <div className="max-w-7xl mx-auto px-6 py-8">
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading...</p>
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600 text-lg">Loading data...</p>
             </div>
           ) : (
             <>
               {activeTab === 'dashboard' && (
                 <div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Dashboard Overview</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <StatCard title="Total Loaned" value={`₱${stats.totalLoaned.toLocaleString()}`} icon={DollarSign} color="#3B82F6" />
-                    <StatCard title="Total Collected" value={`₱${stats.totalPaid.toLocaleString()}`} icon={TrendingUp} color="#10B981" trend={`${stats.collectionRate.toFixed(1)}%`} />
-                    <StatCard title="Outstanding" value={`₱${stats.outstanding.toLocaleString()}`} icon={AlertCircle} color="#F59E0B" />
-                    <StatCard title="Active Borrowers" value={stats.activeBorrowers} icon={Users} color="#8B5CF6" />
-                    <StatCard title="Active Loans" value={stats.activeLoans} icon={FileText} color="#EC4899" />
-                    <StatCard title="Collection Rate" value={`${stats.collectionRate.toFixed(1)}%`} icon={Activity} color="#06B6D4" />
+                  <h2 className="text-3xl font-bold text-gray-900 mb-6">Overview</h2>
+                  
+                  {/* Statistics Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <StatCard 
+                      title="Total Loaned" 
+                      value={`₱${stats.totalLoaned.toLocaleString()}`} 
+                      icon={DollarSign} 
+                      color="#3B82F6"
+                      subtitle="Total amount disbursed"
+                    />
+                    <StatCard 
+                      title="Total Collected" 
+                      value={`₱${stats.totalPaid.toLocaleString()}`} 
+                      icon={TrendingUp} 
+                      color="#10B981" 
+                      trend={`${stats.collectionRate.toFixed(1)}% rate`}
+                      subtitle={`${stats.totalPayments} payments`}
+                    />
+                    <StatCard 
+                      title="Outstanding" 
+                      value={`₱${stats.outstanding.toLocaleString()}`} 
+                      icon={AlertCircle} 
+                      color="#F59E0B"
+                      subtitle="Amount due"
+                    />
+                    <StatCard 
+                      title="Active Borrowers" 
+                      value={stats.activeBorrowers} 
+                      icon={Users} 
+                      color="#8B5CF6"
+                      subtitle={`${stats.activeLoans} active loans`}
+                    />
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText size={24} className="text-blue-600" />
+                        Recent Loans
+                      </h3>
+                      <div className="space-y-3">
+                        {loans.slice(-5).reverse().map(loan => {
+                          const borrower = borrowers.find(b => b.id === loan.borrowerid);
+                          return (
+                            <div key={loan.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:shadow-md transition-all">
+                              <div>
+                                <p className="font-bold text-gray-900">{borrower?.name || 'Unknown'}</p>
+                                <p className="text-sm text-gray-600 capitalize">{loan.type?.replace('-', ' ')}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-gray-900">₱{parseFloat(loan.principal || 0).toLocaleString()}</p>
+                                <p className="text-sm text-gray-600">{loan.rate}% • {loan.term}mo</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow-lg p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <CheckCircle size={24} className="text-green-600" />
+                        Recent Payments
+                      </h3>
+                      <div className="space-y-3">
+                        {payments.slice(-5).reverse().map(payment => {
+                          const borrower = borrowers.find(b => b.id === payment.borrowerid);
+                          return (
+                            <div key={payment.id} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                                  <Check size={20} className="text-white" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-gray-900">{borrower?.name || 'Unknown'}</p>
+                                  <p className="text-sm text-gray-600">
+                                    {new Date(payment.paymentdate).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="font-bold text-green-600 text-lg">₱{parseFloat(payment.amount || 0).toFixed(2)}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -745,12 +1114,25 @@ const LoanManagementSystem = () => {
                   <h2 className="text-3xl font-bold text-gray-900 mb-6">Manage Borrowers</h2>
                   <AddBorrowerForm onSuccess={loadData} />
 
-                  <div className="bg-white rounded-xl shadow-sm p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">All Borrowers ({borrowers.length})</h3>
+                  <div className="bg-white rounded-xl shadow-lg p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center justify-between">
+                      <span>All Borrowers ({borrowers.length})</span>
+                      <button
+                        onClick={exportToCSV}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center gap-2"
+                      >
+                        <Download size={18} />
+                        Export CSV
+                      </button>
+                    </h3>
+                    
                     {borrowers.length === 0 ? (
-                      <p className="text-gray-600 text-center py-8">No borrowers yet. Add one above!</p>
+                      <div className="text-center py-12">
+                        <Users size={48} className="mx-auto text-gray-300 mb-4" />
+                        <p className="text-gray-600 text-lg">No borrowers yet. Add one above!</p>
+                      </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4">
                         {borrowers.map(borrower => {
                           const borrowerLoans = loans.filter(l => l.borrowerid === borrower.id);
                           const loan = borrowerLoans[0];
@@ -760,36 +1142,40 @@ const LoanManagementSystem = () => {
                           const progress = totalBorrowed > 0 ? (totalPaid / totalBorrowed) * 100 : 0;
 
                           return (
-                            <div key={borrower.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all cursor-pointer" onClick={() => setSelectedBorrower(borrower)}>
-                              <div className="flex items-center justify-between mb-3">
+                            <div key={borrower.id} className="border-2 border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all cursor-pointer hover:border-blue-400" onClick={() => setSelectedBorrower(borrower)}>
+                              <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg">
-                                    {borrower.name.charAt(0)}
-                                  </div>
+                                  {borrower.photo ? (
+                                    <img src={borrower.photo} alt={borrower.name} className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-lg" />
+                                  ) : (
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                                      {borrower.name.charAt(0)}
+                                    </div>
+                                  )}
                                   <div>
-                                    <h3 className="font-bold text-gray-900 text-lg">{borrower.name}</h3>
+                                    <h3 className="font-bold text-gray-900 text-xl">{borrower.name}</h3>
                                     {loan && <p className="text-gray-600">₱{parseFloat(loan.principal || 0).toLocaleString()} @ {loan.rate}%</p>}
-                                    <p className="text-sm text-gray-500">Code: {borrower.id}</p>
+                                    <p className="text-sm text-gray-500">ID: {borrower.id}</p>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                   <div className="text-right">
                                     <p className="text-sm text-gray-600">Progress</p>
-                                    <p className="text-lg font-bold text-blue-600">{progress.toFixed(1)}%</p>
+                                    <p className="text-2xl font-bold text-blue-600">{progress.toFixed(1)}%</p>
                                   </div>
                                   <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setSelectedBorrower(borrower);
                                     }}
-                                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold"
+                                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold shadow-lg"
                                   >
                                     View Profile
                                   </button>
                                 </div>
                               </div>
-                              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all" style={{ width: `${progress}%` }} />
+                              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
                               </div>
                             </div>
                           );
@@ -804,6 +1190,38 @@ const LoanManagementSystem = () => {
         </div>
       </div>
     );
+  };
+
+  // Export CSV function
+  const exportToCSV = () => {
+    const csvData = borrowers.map(b => {
+      const borrowerLoans = loans.filter(l => l.borrowerid === b.id);
+      const borrowerPayments = payments.filter(p => p.borrowerid === b.id);
+      const totalBorrowed = borrowerLoans.reduce((sum, l) => sum + parseFloat(l.principal || 0), 0);
+      const totalPaid = borrowerPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+      
+      return {
+        ID: b.id,
+        Name: b.name,
+        Email: b.email,
+        Phone: b.contact,
+        TotalBorrowed: totalBorrowed,
+        TotalPaid: totalPaid,
+        Outstanding: totalBorrowed - totalPaid,
+        Progress: `${((totalPaid / totalBorrowed) * 100).toFixed(1)}%`
+      };
+    });
+    
+    const headers = Object.keys(csvData[0] || {}).join(',');
+    const rows = csvData.map(row => Object.values(row).join(',')).join('\n');
+    const csv = headers + '\n' + rows;
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `borrowers-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
   };
 
   // Main Render
