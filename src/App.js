@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle } from 'lucide-react';
 
 // IMPORTANT: Replace this with your Google Sheets Web App URL
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyN5S5EzT9JEcKuy/5VpAkk9Cnyn8cQNyDqPLZcc4eXr3KbPmuExvpegXkBIqc91g/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
 
 const LoanManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState(null);
