@@ -1389,6 +1389,26 @@ const LoanManagementSystem = () => {
 
               {/* Message Input */}
               <div className="border-t pt-4">
+                {/* Show attachment preview if file is attached */}
+                {attachmentName && (
+                  <div className="mb-3 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center gap-2 text-blue-700">
+                      <Paperclip size={16} />
+                      <span className="font-semibold">{attachmentName}</span>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setAttachment(null);
+                        setAttachmentName('');
+                        console.log('Attachment removed');
+                      }} 
+                      className="text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+                
                 <div className="flex gap-3">
                   <input
                     type="file"
@@ -1399,20 +1419,24 @@ const LoanManagementSystem = () => {
                   />
                   <label
                     htmlFor="message-attachment"
-                    className="cursor-pointer p-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 transition-all hover:border-blue-400"
+                    className={`cursor-pointer p-4 border-2 rounded-xl transition-all ${
+                      attachmentName 
+                        ? 'bg-green-50 border-green-400 hover:bg-green-100' 
+                        : 'border-gray-300 hover:bg-gray-50 hover:border-blue-400'
+                    }`}
                     title="Attach file"
                   >
-                    <Paperclip size={24} className="text-gray-600" />
+                    <Paperclip size={24} className={attachmentName ? 'text-green-600' : 'text-gray-600'} />
                   </label>
                   
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type your message..."
+                    placeholder={attachmentName ? "Add a message (optional)..." : "Type your message..."}
                     className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-lg"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !sendingMessage) {
+                      if (e.key === 'Enter' && !sendingMessage && (newMessage.trim() || attachment)) {
                         handleSendMessage();
                       }
                     }}
@@ -1421,7 +1445,11 @@ const LoanManagementSystem = () => {
                   <button
                     onClick={handleSendMessage}
                     disabled={(!newMessage.trim() && !attachment) || sendingMessage}
-                    className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold transition-all flex items-center gap-2 shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className={`px-8 py-4 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg ${
+                      (newMessage.trim() || attachment) && !sendingMessage
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     {sendingMessage ? (
                       <>
@@ -1436,24 +1464,6 @@ const LoanManagementSystem = () => {
                     )}
                   </button>
                 </div>
-                
-                {attachmentName && (
-                  <div className="mt-3 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <Paperclip size={16} />
-                      <span className="font-semibold">{attachmentName}</span>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setAttachment(null);
-                        setAttachmentName('');
-                      }} 
-                      className="text-red-500 hover:text-red-700 font-semibold"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           )}
