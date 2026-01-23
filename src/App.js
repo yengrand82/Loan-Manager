@@ -372,9 +372,13 @@ const LoanManagementSystem = () => {
       } else {
         const borrower = borrowers.find(b => b.id === loginId);
         if (borrower) {
-          setCurrentUser({ ...borrower, type: 'borrower' });
+          // Set both currentUser and selectedBorrower for borrower login
+          const borrowerUser = { ...borrower, type: 'borrower' };
+          setCurrentUser(borrowerUser);
           setSelectedBorrower(borrower);
           setCurrentView('borrower-profile');
+          console.log('Borrower logged in:', borrowerUser);
+          console.log('Selected borrower set:', borrower);
         } else {
           alert('Invalid credentials. Please check your Borrower ID.');
         }
@@ -755,6 +759,19 @@ const LoanManagementSystem = () => {
   // Borrower Profile View
   const BorrowerProfileView = () => {
     const borrower = selectedBorrower;
+    
+    // Safety check
+    if (!borrower) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+      );
+    }
+    
     const borrowerLoans = loans.filter(l => l.borrowerid === borrower.id);
     const loan = borrowerLoans[0];
     const borrowerPayments = payments.filter(p => p.borrowerid === borrower.id);
@@ -821,6 +838,13 @@ const LoanManagementSystem = () => {
     };
 
     const handleSendMessage = async () => {
+      console.log('=== SEND MESSAGE DEBUG ===');
+      console.log('newMessage:', newMessage);
+      console.log('attachment:', attachment ? 'YES' : 'NO');
+      console.log('currentUser:', currentUser);
+      console.log('selectedBorrower:', selectedBorrower);
+      console.log('========================');
+      
       if (!newMessage.trim() && !attachment) {
         alert('Please type a message or attach a file');
         return;
@@ -1117,7 +1141,7 @@ const LoanManagementSystem = () => {
                                 </button>
                               )}
                             </div>
-                          ) : currentUser.type === 'admin' ? (
+                          ) : (
                             <div className="flex flex-col gap-2">
                               <input
                                 type="file"
@@ -1136,18 +1160,30 @@ const LoanManagementSystem = () => {
                                 {hasProof ? 'Proof Uploaded ✓' : 'Upload Proof'}
                               </label>
                               {hasProof && (
-                                <button
-                                  onClick={() => handleMarkAsPaid(payment.month, payment.payment)}
-                                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
-                                >
-                                  Mark as Paid
-                                </button>
+                                <>
+                                  {currentUser.type === 'admin' ? (
+                                    <button
+                                      onClick={() => handleMarkAsPaid(payment.month, payment.payment)}
+                                      className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
+                                    >
+                                      Mark as Paid
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleMarkAsPaid(payment.month, payment.payment)}
+                                      className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
+                                    >
+                                      Submit Payment
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                              {!hasProof && currentUser.type === 'borrower' && (
+                                <span className={`px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                                  {isOverdue ? 'OVERDUE' : 'PENDING'}
+                                </span>
                               )}
                             </div>
-                          ) : (
-                            <span className={`px-6 py-3 rounded-lg font-bold border-2 ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
-                              {isOverdue ? 'OVERDUE' : 'PENDING'}
-                            </span>
                           )}
                         </div>
                       </div>
