@@ -16,6 +16,7 @@ const LoanManagementSystem = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedBorrower, setSelectedBorrower] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   // Loan calculation functions
   const calculateMonthlyPayment = (principal, rate, term, type) => {
@@ -124,15 +125,20 @@ const LoanManagementSystem = () => {
     }
   }, [borrowers, currentUser]);
 
-  // Auto-refresh messages every 5 seconds when on messages tab
+  // Auto-refresh messages every 5 seconds when on messages tab (but not while typing)
   useEffect(() => {
     if (selectedBorrower && profileTab === 'messages') {
       const interval = setInterval(() => {
-        loadData();
+        if (!isTyping) {
+          console.log('Auto-refreshing messages...');
+          loadData();
+        } else {
+          console.log('Skipping refresh - user is typing');
+        }
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [selectedBorrower, profileTab]);
+  }, [selectedBorrower, profileTab, isTyping]);
 
   // Calculate statistics
   const getStats = () => {
@@ -1465,10 +1471,13 @@ const LoanManagementSystem = () => {
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
+                    onFocus={() => setIsTyping(true)}
+                    onBlur={() => setIsTyping(false)}
                     placeholder={attachmentName ? "Add a message (optional)..." : "Type your message..."}
                     className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-lg"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && !sendingMessage && (newMessage.trim() || attachment)) {
+                        setIsTyping(false);
                         handleSendMessage();
                       }
                     }}
