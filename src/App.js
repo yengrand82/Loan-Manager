@@ -1171,6 +1171,12 @@ const LoanManagementSystem = () => {
                   const hasProof = paymentProofs[payment.month];
                   const isOverdue = new Date(payment.dueDate) < new Date() && !isPaid;
                   
+                  // Debug logging
+                  const pendingForThisMonth = borrowerPayments.filter(p => parseInt(p.month) === payment.month && p.status === 'pending');
+                  if (pendingForThisMonth.length > 0) {
+                    console.log(`Payment #${payment.month} has ${pendingForThisMonth.length} pending payment(s):`, pendingForThisMonth);
+                  }
+                  
                   return (
                     <div key={idx} className={`border-2 rounded-xl p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : isOverdue ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:shadow-md'}`}>
                       <div className="flex items-center justify-between">
@@ -1320,31 +1326,62 @@ const LoanManagementSystem = () => {
                                 </button>
                               )}
                               {currentUser.type === 'admin' && (
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      await fetch(GOOGLE_SHEETS_URL, {
-                                        method: 'POST',
-                                        body: JSON.stringify({
-                                          action: 'updatePaymentStatus',
-                                          data: {
-                                            id: pendingPayment.id,
-                                            status: 'completed'
-                                          }
-                                        })
-                                      });
+                                <div className="flex gap-2 mt-2">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await fetch(GOOGLE_SHEETS_URL, {
+                                          method: 'POST',
+                                          body: JSON.stringify({
+                                            action: 'updatePaymentStatus',
+                                            data: {
+                                              id: pendingPayment.id,
+                                              status: 'completed'
+                                            }
+                                          })
+                                        });
+                                        
+                                        await loadData();
+                                        alert('✅ Payment approved and marked as paid!');
+                                      } catch (error) {
+                                        alert('Error: ' + error.message);
+                                      }
+                                    }}
+                                    className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                                  >
+                                    <CheckCircle size={20} />
+                                    Approve & Mark as Paid
+                                  </button>
+                                  
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm('Are you sure you want to reject this payment proof? This will delete the submission.')) {
+                                        return;
+                                      }
                                       
-                                      await loadData();
-                                      alert('✅ Payment approved and marked as paid!');
-                                    } catch (error) {
-                                      alert('Error: ' + error.message);
-                                    }
-                                  }}
-                                  className="mt-2 w-full px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg flex items-center justify-center gap-2"
-                                >
-                                  <CheckCircle size={20} />
-                                  Approve & Mark as Paid
-                                </button>
+                                      try {
+                                        await fetch(GOOGLE_SHEETS_URL, {
+                                          method: 'POST',
+                                          body: JSON.stringify({
+                                            action: 'deletePayment',
+                                            data: {
+                                              id: pendingPayment.id
+                                            }
+                                          })
+                                        });
+                                        
+                                        await loadData();
+                                        alert('❌ Payment proof rejected and removed.');
+                                      } catch (error) {
+                                        alert('Error: ' + error.message);
+                                      }
+                                    }}
+                                    className="px-6 py-3 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                                  >
+                                    <XCircle size={20} />
+                                    Reject
+                                  </button>
+                                </div>
                               )}
                             </div>
                           ))}
