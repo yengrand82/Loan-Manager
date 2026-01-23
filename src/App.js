@@ -1220,7 +1220,25 @@ const LoanManagementSystem = () => {
                               </span>
                               {paymentRecord && paymentRecord.proof && (
                                 <button
-                                  onClick={() => window.open(paymentRecord.proof, '_blank')}
+                                  onClick={() => {
+                                    if (paymentRecord.proof.startsWith('data:')) {
+                                      const modal = document.createElement('div');
+                                      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                                      modal.innerHTML = `
+                                        <div style="position:relative;max-width:90%;max-height:90%;overflow:auto;">
+                                          <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:white;border:none;border-radius:50%;width:40px;height:40px;font-size:24px;cursor:pointer;z-index:10000;">×</button>
+                                          ${paymentRecord.proof.startsWith('data:image') 
+                                            ? `<img src="${paymentRecord.proof}" style="max-width:100%;max-height:90vh;border-radius:8px;" />`
+                                            : `<iframe src="${paymentRecord.proof}" style="width:800px;height:600px;border:none;background:white;border-radius:8px;"></iframe>`
+                                          }
+                                        </div>
+                                      `;
+                                      document.body.appendChild(modal);
+                                      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                                    } else {
+                                      window.open(paymentRecord.proof, '_blank');
+                                    }
+                                  }}
                                   className="mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
                                 >
                                   <FileText size={14} />
@@ -1318,7 +1336,28 @@ const LoanManagementSystem = () => {
                               </p>
                               {pendingPayment.proof && (
                                 <button
-                                  onClick={() => window.open(pendingPayment.proof, '_blank')}
+                                  onClick={() => {
+                                    // Check if it's a base64 data URL or regular URL
+                                    if (pendingPayment.proof.startsWith('data:')) {
+                                      // Create modal to show base64 image
+                                      const modal = document.createElement('div');
+                                      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                                      modal.innerHTML = `
+                                        <div style="position:relative;max-width:90%;max-height:90%;overflow:auto;">
+                                          <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:white;border:none;border-radius:50%;width:40px;height:40px;font-size:24px;cursor:pointer;z-index:10000;">×</button>
+                                          ${pendingPayment.proof.startsWith('data:image') 
+                                            ? `<img src="${pendingPayment.proof}" style="max-width:100%;max-height:90vh;border-radius:8px;" />`
+                                            : `<iframe src="${pendingPayment.proof}" style="width:800px;height:600px;border:none;background:white;border-radius:8px;"></iframe>`
+                                          }
+                                        </div>
+                                      `;
+                                      document.body.appendChild(modal);
+                                      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                                    } else {
+                                      // Regular URL - open in new tab
+                                      window.open(pendingPayment.proof, '_blank');
+                                    }
+                                  }}
                                   className="mt-2 w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
                                 >
                                   <FileText size={16} />
@@ -1427,7 +1466,25 @@ const LoanManagementSystem = () => {
                         <p className="text-2xl font-bold text-green-600">₱{parseFloat(payment.amount).toFixed(2)}</p>
                         {payment.proof && (
                           <button
-                            onClick={() => window.open(payment.proof, '_blank')}
+                            onClick={() => {
+                              if (payment.proof.startsWith('data:')) {
+                                const modal = document.createElement('div');
+                                modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;';
+                                modal.innerHTML = `
+                                  <div style="position:relative;max-width:90%;max-height:90%;overflow:auto;">
+                                    <button onclick="this.parentElement.parentElement.remove()" style="position:absolute;top:10px;right:10px;background:white;border:none;border-radius:50%;width:40px;height:40px;font-size:24px;cursor:pointer;z-index:10000;">×</button>
+                                    ${payment.proof.startsWith('data:image') 
+                                      ? `<img src="${payment.proof}" style="max-width:100%;max-height:90vh;border-radius:8px;" />`
+                                      : `<iframe src="${payment.proof}" style="width:800px;height:600px;border:none;background:white;border-radius:8px;"></iframe>`
+                                    }
+                                  </div>
+                                `;
+                                document.body.appendChild(modal);
+                                modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+                              } else {
+                                window.open(payment.proof, '_blank');
+                              }
+                            }}
                             className="mt-1 text-sm text-blue-600 hover:underline flex items-center gap-1"
                           >
                             <FileText size={14} />
