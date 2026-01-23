@@ -109,8 +109,20 @@ const LoanManagementSystem = () => {
   };
 
   useEffect(() => {
-    if (currentUser) loadData();
+    if (currentUser) {
+      loadData();
+    }
   }, [currentUser]);
+
+  // Keep selectedBorrower in sync when borrower is logged in
+  useEffect(() => {
+    if (currentUser && currentUser.type === 'borrower' && borrowers.length > 0) {
+      const updated = borrowers.find(b => b.id === currentUser.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedBorrower)) {
+        setSelectedBorrower(updated);
+      }
+    }
+  }, [borrowers, currentUser]);
 
   // Auto-refresh messages every 5 seconds when on messages tab
   useEffect(() => {
@@ -214,6 +226,17 @@ const LoanManagementSystem = () => {
         return false;
       }
 
+      if (!currentUser) {
+        alert('Error: User not logged in');
+        return false;
+      }
+
+      if (!selectedBorrower) {
+        alert('Error: Borrower not selected');
+        console.error('currentUser:', currentUser);
+        return false;
+      }
+
       const message = {
         id: `MSG${Date.now()}`,
         senderid: currentUser.id,
@@ -241,7 +264,7 @@ const LoanManagementSystem = () => {
         await loadData();
         return true;
       } else {
-        alert('Failed to send message');
+        alert('Failed to send message: ' + (result.error || 'Unknown error'));
         return false;
       }
     } catch (error) {
