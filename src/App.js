@@ -143,9 +143,24 @@ const LoanManagementSystem = () => {
   // Calculate statistics
   const getStats = () => {
     const totalLoaned = loans.reduce((sum, l) => sum + parseFloat(l.principal || 0), 0);
-    const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-    const outstanding = totalLoaned - totalPaid;
-    const collectionRate = totalLoaned > 0 ? (totalPaid / totalLoaned) * 100 : 0;
+    const totalPaid = payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    
+    // Calculate total amount to be paid (including all interest)
+    let totalToBePaid = 0;
+    loans.forEach(loan => {
+      try {
+        const schedule = typeof loan.schedule === 'string' ? JSON.parse(loan.schedule) : loan.schedule;
+        if (Array.isArray(schedule)) {
+          totalToBePaid += schedule.reduce((sum, s) => sum + parseFloat(s.payment || 0), 0);
+        }
+      } catch (e) {
+        // If can't parse schedule, just use principal
+        totalToBePaid += parseFloat(loan.principal || 0);
+      }
+    });
+    
+    const outstanding = totalToBePaid - totalPaid;
+    const collectionRate = totalToBePaid > 0 ? (totalPaid / totalToBePaid) * 100 : 0;
     
     const paidPayments = payments.filter(p => p.status === 'completed').length;
     const totalPaymentsDue = loans.reduce((sum, l) => sum + parseInt(l.term || 0), 0);
@@ -932,7 +947,15 @@ const LoanManagementSystem = () => {
     const totalPaid = borrowerPayments
       .filter(p => p.status === 'completed')
       .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-    const totalLoan = loan ? parseFloat(loan.principal) : 0;
+    
+    // Calculate total to be paid (including all interest from schedule)
+    let totalLoan = 0;
+    if (loan && schedule && Array.isArray(schedule)) {
+      totalLoan = schedule.reduce((sum, s) => sum + parseFloat(s.payment || 0), 0);
+    } else if (loan) {
+      totalLoan = parseFloat(loan.principal);
+    }
+    
     const progress = totalLoan > 0 ? (totalPaid / totalLoan) * 100 : 0;
 
     // Get next due date
