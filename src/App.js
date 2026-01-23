@@ -37,6 +37,26 @@ const LoanManagementSystem = () => {
           status: 'pending'
         });
       }
+    } else if (type === 'flat-rate') {
+      // Flat Rate: Simple interest, equal monthly payments
+      // Total Interest = Principal × Rate × Term
+      // Monthly Payment = (Principal + Total Interest) / Term
+      const totalInterest = (principal * rate * term) / 100;
+      const monthlyPayment = (principal + totalInterest) / term;
+      const principalPerMonth = principal / term;
+      const interestPerMonth = totalInterest / term;
+      
+      for (let i = 1; i <= term; i++) {
+        schedule.push({
+          month: i,
+          payment: monthlyPayment,
+          principal: principalPerMonth,
+          interest: interestPerMonth,
+          balance: principal - (principalPerMonth * i),
+          dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          status: 'pending'
+        });
+      }
     } else if (type === 'amortized') {
       const monthlyPayment = (principal * monthlyRate * Math.pow(1 + monthlyRate, term)) / (Math.pow(1 + monthlyRate, term) - 1);
       let balance = principal;
@@ -519,7 +539,7 @@ const LoanManagementSystem = () => {
   // Application Approval Component
   const ApplicationItem = ({ app, onApprove }) => {
     const [rate, setRate] = useState('5');
-    const [type, setType] = useState('interest-only');
+    const [type, setType] = useState('flat-rate');
 
     return (
       <div className="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6">
@@ -569,6 +589,7 @@ const LoanManagementSystem = () => {
                 onChange={(e) => setType(e.target.value)} 
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
               >
+                <option value="flat-rate">Flat Rate (Equal Monthly)</option>
                 <option value="interest-only">Interest Only</option>
                 <option value="amortized">Amortized</option>
                 <option value="staggered">Staggered</option>
@@ -589,7 +610,7 @@ const LoanManagementSystem = () => {
   // Add Borrower Form
   const AddBorrowerForm = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
-      name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only', startDate: new Date().toISOString().split('T')[0]
+      name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0]
     });
     const [saving, setSaving] = useState(false);
 
@@ -646,7 +667,7 @@ const LoanManagementSystem = () => {
         });
 
         alert('✅ Borrower added successfully!');
-        setFormData({ name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only', startDate: new Date().toISOString().split('T')[0] });
+        setFormData({ name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0] });
         if (onSuccess) onSuccess();
       } catch (error) {
         alert('Error: ' + error.message);
@@ -675,6 +696,7 @@ const LoanManagementSystem = () => {
               <option value="24">24 Months</option>
             </select>
             <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+              <option value="flat-rate">Flat Rate (Equal Monthly)</option>
               <option value="interest-only">Interest Only</option>
               <option value="amortized">Amortized</option>
               <option value="staggered">Staggered</option>
