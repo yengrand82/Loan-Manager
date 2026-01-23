@@ -433,6 +433,76 @@ const LoanManagementSystem = () => {
     </div>
   );
 
+  // Application Approval Component
+  const ApplicationItem = ({ app, onApprove }) => {
+    const [rate, setRate] = useState('5');
+    const [type, setType] = useState('interest-only');
+
+    return (
+      <div className="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h4 className="font-bold text-xl text-gray-900">{app.borrowername}</h4>
+            <p className="text-sm text-gray-600">Borrower ID: {app.borrowerid}</p>
+            <p className="text-2xl font-bold text-gray-900 mt-2">₱{parseFloat(app.amount).toLocaleString()}</p>
+            <p className="text-sm text-gray-600 mt-1">Term: {app.term} months</p>
+            <div className="mt-3 p-3 bg-white rounded-lg">
+              <p className="text-sm font-semibold text-gray-700">Purpose:</p>
+              <p className="text-gray-900">{app.purpose}</p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-4">
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-sm font-semibold text-gray-700">Monthly Income:</p>
+                <p className="text-gray-900">₱{parseFloat(app.income).toLocaleString()}</p>
+              </div>
+              <div className="p-3 bg-white rounded-lg">
+                <p className="text-sm font-semibold text-gray-700">Employment:</p>
+                <p className="text-gray-900">{app.employment}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">
+              Applied: {new Date(app.timestamp).toLocaleString()}
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-4 p-4 bg-white rounded-lg">
+          <h5 className="font-bold text-gray-900 mb-3">Approve Loan:</h5>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Interest Rate (%)</label>
+              <input 
+                type="number" 
+                step="0.1"
+                value={rate} 
+                onChange={(e) => setRate(e.target.value)} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Loan Type</label>
+              <select 
+                value={type} 
+                onChange={(e) => setType(e.target.value)} 
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+              >
+                <option value="interest-only">Interest Only</option>
+                <option value="amortized">Amortized</option>
+                <option value="staggered">Staggered</option>
+              </select>
+            </div>
+          </div>
+          <button
+            onClick={() => onApprove(app, rate, type)}
+            className="w-full px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
+          >
+            Approve Application
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // Add Borrower Form
   const AddBorrowerForm = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -1503,74 +1573,13 @@ const LoanManagementSystem = () => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {applications.filter(a => a.status === 'pending').map(app => {
-                          const [rate, setRate] = useState('5');
-                          const [type, setType] = useState('interest-only');
-                          
-                          return (
-                            <div key={app.id} className="border-2 border-yellow-200 bg-yellow-50 rounded-xl p-6">
-                              <div className="flex items-start justify-between mb-4">
-                                <div className="flex-1">
-                                  <h4 className="font-bold text-xl text-gray-900">{app.borrowername}</h4>
-                                  <p className="text-sm text-gray-600">Borrower ID: {app.borrowerid}</p>
-                                  <p className="text-2xl font-bold text-gray-900 mt-2">₱{parseFloat(app.amount).toLocaleString()}</p>
-                                  <p className="text-sm text-gray-600 mt-1">Term: {app.term} months</p>
-                                  <div className="mt-3 p-3 bg-white rounded-lg">
-                                    <p className="text-sm font-semibold text-gray-700">Purpose:</p>
-                                    <p className="text-gray-900">{app.purpose}</p>
-                                  </div>
-                                  <div className="mt-2 grid grid-cols-2 gap-4">
-                                    <div className="p-3 bg-white rounded-lg">
-                                      <p className="text-sm font-semibold text-gray-700">Monthly Income:</p>
-                                      <p className="text-gray-900">₱{parseFloat(app.income).toLocaleString()}</p>
-                                    </div>
-                                    <div className="p-3 bg-white rounded-lg">
-                                      <p className="text-sm font-semibold text-gray-700">Employment:</p>
-                                      <p className="text-gray-900">{app.employment}</p>
-                                    </div>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-3">
-                                    Applied: {new Date(app.timestamp).toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              <div className="mt-4 p-4 bg-white rounded-lg">
-                                <h5 className="font-bold text-gray-900 mb-3">Approve Loan:</h5>
-                                <div className="grid grid-cols-2 gap-4 mb-4">
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Interest Rate (%)</label>
-                                    <input 
-                                      type="number" 
-                                      step="0.1"
-                                      value={rate} 
-                                      onChange={(e) => setRate(e.target.value)} 
-                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Loan Type</label>
-                                    <select 
-                                      value={type} 
-                                      onChange={(e) => setType(e.target.value)} 
-                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
-                                    >
-                                      <option value="interest-only">Interest Only</option>
-                                      <option value="amortized">Amortized</option>
-                                      <option value="staggered">Staggered</option>
-                                    </select>
-                                  </div>
-                                </div>
-                                <button
-                                  onClick={() => approveLoanApplication(app, rate, type)}
-                                  className="w-full px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
-                                >
-                                  Approve Application
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {applications.filter(a => a.status === 'pending').map(app => (
+                          <ApplicationItem 
+                            key={app.id} 
+                            app={app} 
+                            onApprove={approveLoanApplication} 
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
