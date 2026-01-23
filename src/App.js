@@ -221,22 +221,28 @@ const LoanManagementSystem = () => {
   // Send message
   const sendMessage = async (messageText, attachment) => {
     try {
+      console.log('=== SEND MESSAGE FUNCTION START ===');
+      console.log('1. Input validation...');
+      
       if (!messageText.trim() && !attachment) {
         alert('Please type a message or attach a file');
         return false;
       }
 
       if (!currentUser) {
+        console.error('ERROR: No current user');
         alert('Error: User not logged in');
         return false;
       }
 
       if (!selectedBorrower) {
-        alert('Error: Borrower not selected');
+        console.error('ERROR: No selected borrower');
         console.error('currentUser:', currentUser);
+        alert('Error: Borrower not selected');
         return false;
       }
 
+      console.log('2. Creating message object...');
       const message = {
         id: `MSG${Date.now()}`,
         senderid: currentUser.id,
@@ -247,28 +253,53 @@ const LoanManagementSystem = () => {
         read: false
       };
       
-      console.log('Sending message:', message);
+      console.log('3. Message object created:', {
+        id: message.id,
+        senderid: message.senderid,
+        receiverid: message.receiverid,
+        hasMessage: !!message.message,
+        hasImage: !!message.image,
+        imageLength: message.image ? message.image.length : 0
+      });
+      
+      console.log('4. Sending to Google Sheets...');
+      console.log('URL:', GOOGLE_SHEETS_URL);
+      
+      const requestBody = {
+        action: 'sendMessage',
+        data: message
+      };
+      console.log('Request body:', JSON.stringify(requestBody).substring(0, 200) + '...');
       
       const response = await fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
-        body: JSON.stringify({
-          action: 'sendMessage',
-          data: message
-        })
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('5. Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       });
       
       const result = await response.json();
-      console.log('Message result:', result);
+      console.log('6. Result parsed:', result);
       
       if (result.success) {
+        console.log('7. SUCCESS! Reloading data...');
         await loadData();
+        console.log('8. Data reloaded. Message sent successfully!');
         return true;
       } else {
+        console.error('7. FAILED:', result);
         alert('Failed to send message: ' + (result.error || 'Unknown error'));
         return false;
       }
     } catch (error) {
-      console.error('Message error:', error);
+      console.error('=== ERROR IN SEND MESSAGE ===');
+      console.error('Error type:', error.name);
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
       alert('Error sending message: ' + error.message);
       return false;
     }
@@ -798,7 +829,9 @@ const LoanManagementSystem = () => {
       }
     }
 
-    const paidMonths = borrowerPayments.map(p => parseInt(p.month));
+    const paidMonths = borrowerPayments
+      .filter(p => p.status === 'completed')  // Only completed payments
+      .map(p => parseInt(p.month));
 
     const handlePhotoUpload = async (e) => {
       const file = e.target.files[0];
@@ -890,7 +923,9 @@ const LoanManagementSystem = () => {
       }
     };
 
-    const totalPaid = borrowerPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+    const totalPaid = borrowerPayments
+      .filter(p => p.status === 'completed')
+      .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
     const totalLoan = loan ? parseFloat(loan.principal) : 0;
     const progress = totalLoan > 0 ? (totalPaid / totalLoan) * 100 : 0;
 
