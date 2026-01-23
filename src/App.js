@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle, Bell } from 'lucide-react';
+import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle, Bell, MapPin } from 'lucide-react';
 
 // IMPORTANT: Replace with your Google Sheets Web App URL
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
@@ -610,8 +610,9 @@ const LoanManagementSystem = () => {
   // Add Borrower Form
   const AddBorrowerForm = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
-      name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0]
+      name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0]
     });
+    const [photo, setPhoto] = useState(null);
     const [saving, setSaving] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -641,9 +642,9 @@ const LoanManagementSystem = () => {
               id: borrowerId, 
               name: formData.name, 
               contact: formData.contact, 
-              address: '', 
+              address: formData.address, 
               email: formData.email,
-              photo: ''
+              photo: photo || ''
             }
           })
         });
@@ -667,12 +668,28 @@ const LoanManagementSystem = () => {
         });
 
         alert('✅ Borrower added successfully!');
-        setFormData({ name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0] });
+        setFormData({ name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0] });
+        setPhoto(null);
         if (onSuccess) onSuccess();
       } catch (error) {
         alert('Error: ' + error.message);
       } finally {
         setSaving(false);
+      }
+    };
+
+    const handlePhotoUpload = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 2000000) {
+          alert('Image too large. Please use an image smaller than 2MB');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPhoto(reader.result);
+        };
+        reader.readAsDataURL(file);
       }
     };
 
@@ -683,10 +700,29 @@ const LoanManagementSystem = () => {
           Add New Borrower
         </h3>
         <form onSubmit={handleSubmit}>
+          {/* Photo Upload */}
+          <div className="mb-6 flex flex-col items-center">
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden border-4 border-blue-500">
+                {photo ? (
+                  <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={48} className="text-gray-400" />
+                )}
+              </div>
+              <label className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-2 cursor-pointer hover:bg-blue-700 transition-all shadow-lg">
+                <Camera size={20} className="text-white" />
+                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+              </label>
+            </div>
+            <p className="text-sm text-gray-600 mt-2">Click camera to upload photo</p>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <input type="text" placeholder="Full Name *" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" required />
             <input type="email" placeholder="Email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
             <input type="tel" placeholder="Phone" value={formData.contact} onChange={(e) => setFormData({...formData, contact: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
+            <input type="text" placeholder="Address" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" />
             <input type="number" placeholder="Loan Amount *" value={formData.principal} onChange={(e) => setFormData({...formData, principal: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" required />
             <input type="number" step="0.1" placeholder="Interest Rate (%) *" value={formData.rate} onChange={(e) => setFormData({...formData, rate: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" required />
             <select value={formData.term} onChange={(e) => setFormData({...formData, term: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
@@ -1135,6 +1171,13 @@ const LoanManagementSystem = () => {
                     <div>
                       <p className="text-sm text-gray-600">Email</p>
                       <p className="font-semibold text-gray-900">{borrower.email || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <MapPin size={20} className="text-blue-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Address</p>
+                      <p className="font-semibold text-gray-900">{borrower.address || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
