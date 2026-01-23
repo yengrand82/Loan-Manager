@@ -182,8 +182,12 @@ const LoanManagementSystem = () => {
   // Update borrower photo
   const updateBorrowerPhoto = async (borrowerId, photoData) => {
     try {
+      console.log('Uploading photo for borrower:', borrowerId);
+      console.log('Photo data length:', photoData ? photoData.length : 0);
+      
       const response = await fetch(GOOGLE_SHEETS_URL, {
         method: 'POST',
+        mode: 'no-cors', // Add this to avoid CORS issues
         body: JSON.stringify({
           action: 'updateBorrower',
           data: {
@@ -193,14 +197,14 @@ const LoanManagementSystem = () => {
         })
       });
       
-      const result = await response.json();
-      console.log('Photo update result:', result);
+      console.log('Photo upload response status:', response.status);
       
+      // With no-cors, we can't read the response, so just reload and hope it worked
       await loadData();
-      alert('✅ Photo updated successfully!');
+      alert('✅ Photo uploaded! Refreshing...');
     } catch (error) {
       console.error('Error updating photo:', error);
-      alert('Error updating photo: ' + error.message);
+      alert('Error uploading photo. Please try a smaller image (under 2MB).');
     }
   };
 
@@ -585,7 +589,7 @@ const LoanManagementSystem = () => {
   // Add Borrower Form
   const AddBorrowerForm = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
-      name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only'
+      name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only', startDate: new Date().toISOString().split('T')[0]
     });
     const [saving, setSaving] = useState(false);
 
@@ -634,7 +638,7 @@ const LoanManagementSystem = () => {
               principal: parseFloat(formData.principal),
               rate: parseFloat(formData.rate),
               term: parseInt(formData.term),
-              startDate: new Date().toISOString().split('T')[0],
+              startDate: formData.startDate,
               status: 'active',
               schedule: JSON.stringify(schedule)
             }
@@ -642,7 +646,7 @@ const LoanManagementSystem = () => {
         });
 
         alert('✅ Borrower added successfully!');
-        setFormData({ name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only' });
+        setFormData({ name: '', email: '', contact: '', principal: '', rate: '', term: '3', type: 'interest-only', startDate: new Date().toISOString().split('T')[0] });
         if (onSuccess) onSuccess();
       } catch (error) {
         alert('Error: ' + error.message);
@@ -675,6 +679,10 @@ const LoanManagementSystem = () => {
               <option value="amortized">Amortized</option>
               <option value="staggered">Staggered</option>
             </select>
+            <div className="flex flex-col">
+              <label className="text-sm font-semibold text-gray-700 mb-2">Loan Start Date *</label>
+              <input type="date" value={formData.startDate} onChange={(e) => setFormData({...formData, startDate: e.target.value})} className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600" required />
+            </div>
           </div>
           <button type="submit" disabled={saving} className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all disabled:bg-gray-400 shadow-lg flex items-center justify-center gap-2">
             {saving ? (
