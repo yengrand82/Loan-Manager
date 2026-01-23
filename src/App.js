@@ -1195,91 +1195,88 @@ const LoanManagementSystem = () => {
                             </div>
                           ) : (
                             <div className="flex flex-col gap-2">
-                              {/* File upload input */}
-                              <input
-                                type="file"
-                                accept="image/*,.pdf"
-                                onChange={(e) => handleFileUpload(e, false, payment.month)}
-                                className="hidden"
-                                id={`proof-${payment.month}`}
-                              />
-                              
-                              {/* Upload button - everyone can upload */}
-                              <label
-                                htmlFor={`proof-${payment.month}`}
-                                className={`px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center gap-2 ${
-                                  hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                                }`}
-                              >
-                                <Upload size={18} />
-                                {hasProof ? 'Proof Uploaded ✓' : 'Upload Proof'}
-                              </label>
-                              
-                              {/* Action buttons based on user type */}
-                              {hasProof && currentUser.type === 'borrower' && (
-                                <button
-                                  onClick={async () => {
-                                    const proof = paymentProofs[payment.month];
-                                    if (!proof) return;
-                                    
-                                    // Borrower submits proof (creates pending payment record)
-                                    try {
-                                      const pendingPayment = {
-                                        id: `PAY${Date.now()}`,
-                                        loanId: loan.id,
-                                        borrowerId: borrower.id,
-                                        amount: payment.payment,
-                                        month: payment.month,
-                                        paymentDate: new Date().toISOString(),
-                                        proof: proof,
-                                        status: 'pending' // Wait for admin approval
-                                      };
-                                      
-                                      await fetch(GOOGLE_SHEETS_URL, {
-                                        method: 'POST',
-                                        body: JSON.stringify({
-                                          action: 'addPayment',
-                                          data: pendingPayment
-                                        })
-                                      });
-                                      
-                                      await loadData();
-                                      setPaymentProofs({...paymentProofs, [payment.month]: null});
-                                      alert('✅ Payment proof submitted! Waiting for admin approval.');
-                                    } catch (error) {
-                                      alert('Error: ' + error.message);
-                                    }
-                                  }}
-                                  className="px-6 py-3 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-all shadow-lg"
-                                >
-                                  Submit for Approval
-                                </button>
+                              {/* BORROWER: Can upload proof */}
+                              {currentUser.type === 'borrower' && (
+                                <>
+                                  <input
+                                    type="file"
+                                    accept="image/*,.pdf"
+                                    onChange={(e) => handleFileUpload(e, false, payment.month)}
+                                    className="hidden"
+                                    id={`proof-${payment.month}`}
+                                  />
+                                  <label
+                                    htmlFor={`proof-${payment.month}`}
+                                    className={`px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center gap-2 ${
+                                      hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                    }`}
+                                  >
+                                    <Upload size={18} />
+                                    {hasProof ? 'Proof Uploaded ✓' : 'Upload Proof'}
+                                  </label>
+                                  
+                                  {hasProof && (
+                                    <button
+                                      onClick={async () => {
+                                        const proof = paymentProofs[payment.month];
+                                        if (!proof) return;
+                                        
+                                        try {
+                                          const pendingPayment = {
+                                            id: `PAY${Date.now()}`,
+                                            loanId: loan.id,
+                                            borrowerId: borrower.id,
+                                            amount: payment.payment,
+                                            month: payment.month,
+                                            paymentDate: new Date().toISOString(),
+                                            proof: proof,
+                                            status: 'pending'
+                                          };
+                                          
+                                          await fetch(GOOGLE_SHEETS_URL, {
+                                            method: 'POST',
+                                            body: JSON.stringify({
+                                              action: 'addPayment',
+                                              data: pendingPayment
+                                            })
+                                          });
+                                          
+                                          await loadData();
+                                          setPaymentProofs({...paymentProofs, [payment.month]: null});
+                                          alert('✅ Payment proof submitted! Waiting for admin approval.');
+                                        } catch (error) {
+                                          alert('Error: ' + error.message);
+                                        }
+                                      }}
+                                      className="px-6 py-3 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-all shadow-lg"
+                                    >
+                                      Submit for Approval
+                                    </button>
+                                  )}
+                                  
+                                  {!hasProof && (
+                                    <span className={`px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                                      {isOverdue ? 'OVERDUE' : 'PENDING'}
+                                    </span>
+                                  )}
+                                </>
                               )}
                               
-                              {hasProof && currentUser.type === 'admin' && (
-                                <button
-                                  onClick={() => handleMarkAsPaid(payment.month, payment.payment)}
-                                  className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg"
-                                >
-                                  Approve & Mark as Paid
-                                </button>
-                              )}
-                              
-                              {/* Status badge if no proof uploaded yet */}
-                              {!hasProof && (
+                              {/* ADMIN: Can only view, not upload */}
+                              {currentUser.type === 'admin' && (
                                 <span className={`px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
-                                  {isOverdue ? 'OVERDUE' : 'PENDING'}
+                                  {isOverdue ? 'OVERDUE' : 'AWAITING BORROWER'}
                                 </span>
                               )}
                             </div>
                           )}
                           
-                          {/* Show pending payments that were submitted by borrower */}
+                          {/* Show pending payments submitted by borrower */}
                           {!isPaid && borrowerPayments.filter(p => parseInt(p.month) === payment.month && p.status === 'pending').map(pendingPayment => (
-                            <div key={pendingPayment.id} className="mt-2 p-3 bg-orange-50 border-2 border-orange-300 rounded-lg">
+                            <div key={pendingPayment.id} className="mt-2 p-4 bg-orange-50 border-2 border-orange-300 rounded-lg w-full">
                               <p className="text-sm font-bold text-orange-700 flex items-center gap-2">
                                 <Clock size={16} />
-                                Pending Admin Approval
+                                {currentUser.type === 'admin' ? 'Awaiting Your Approval' : 'Pending Admin Approval'}
                               </p>
                               <p className="text-xs text-orange-600 mt-1">
                                 Submitted: {new Date(pendingPayment.paymentdate).toLocaleDateString()}
@@ -1287,17 +1284,16 @@ const LoanManagementSystem = () => {
                               {pendingPayment.proof && (
                                 <button
                                   onClick={() => window.open(pendingPayment.proof, '_blank')}
-                                  className="mt-2 text-sm text-blue-600 hover:underline flex items-center gap-1"
+                                  className="mt-2 w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
                                 >
-                                  <FileText size={14} />
-                                  View Submitted Proof
+                                  <FileText size={16} />
+                                  {currentUser.type === 'admin' ? 'View Proof to Verify' : 'View Submitted Proof'}
                                 </button>
                               )}
                               {currentUser.type === 'admin' && (
                                 <button
                                   onClick={async () => {
                                     try {
-                                      // Update payment status to completed
                                       await fetch(GOOGLE_SHEETS_URL, {
                                         method: 'POST',
                                         body: JSON.stringify({
@@ -1315,9 +1311,10 @@ const LoanManagementSystem = () => {
                                       alert('Error: ' + error.message);
                                     }
                                   }}
-                                  className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all"
+                                  className="mt-2 w-full px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg flex items-center justify-center gap-2"
                                 >
-                                  Approve Payment
+                                  <CheckCircle size={20} />
+                                  Approve & Mark as Paid
                                 </button>
                               )}
                             </div>
