@@ -1669,6 +1669,15 @@ const LoanManagementSystem = () => {
                 Messages
               </h2>
               
+              {/* Debug Info */}
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg text-xs">
+                <p><strong>Debug:</strong></p>
+                <p>Current User: {currentUser?.id} ({currentUser?.type})</p>
+                <p>Selected Borrower: {selectedBorrower?.id}</p>
+                <p>Total Messages: {messages.length}</p>
+                <p>Filtered Messages: {borrowerMessages.length}</p>
+              </div>
+              
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
                 {borrowerMessages.length === 0 ? (
                   <div className="text-center py-12">
