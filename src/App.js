@@ -1692,7 +1692,7 @@ const LoanManagementSystem = () => {
                   </div>
                 )}
                 
-                <div className="flex gap-3">
+                <div className="flex gap-2 items-center">
                   <input
                     type="file"
                     accept="image/*,.pdf,.doc,.docx"
@@ -1702,14 +1702,14 @@ const LoanManagementSystem = () => {
                   />
                   <label
                     htmlFor="message-attachment"
-                    className={`cursor-pointer p-4 border-2 rounded-xl transition-all ${
+                    className={`flex-shrink-0 cursor-pointer p-3 border-2 rounded-xl transition-all ${
                       attachmentName 
                         ? 'bg-green-50 border-green-400 hover:bg-green-100' 
                         : 'border-gray-300 hover:bg-gray-50 hover:border-blue-400'
                     }`}
                     title="Attach file"
                   >
-                    <Paperclip size={24} className={attachmentName ? 'text-green-600' : 'text-gray-600'} />
+                    <Paperclip size={20} className={attachmentName ? 'text-green-600' : 'text-gray-600'} />
                   </label>
                   
                   <input
@@ -1718,8 +1718,8 @@ const LoanManagementSystem = () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onFocus={() => setIsTyping(true)}
                     onBlur={() => setIsTyping(false)}
-                    placeholder={attachmentName ? "Add a message (optional)..." : "Type your message..."}
-                    className="flex-1 px-6 py-4 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-lg"
+                    placeholder={attachmentName ? "Add message..." : "Type message..."}
+                    className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && !sendingMessage && (newMessage.trim() || attachment)) {
                         setIsTyping(false);
@@ -1731,7 +1731,7 @@ const LoanManagementSystem = () => {
                   <button
                     onClick={handleSendMessage}
                     disabled={(!newMessage.trim() && !attachment) || sendingMessage}
-                    className={`px-8 py-4 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg ${
+                    className={`flex-shrink-0 px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg ${
                       (newMessage.trim() || attachment) && !sendingMessage
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -1740,12 +1740,12 @@ const LoanManagementSystem = () => {
                     {sendingMessage ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Sending...
+                        <span className="hidden sm:inline">Sending...</span>
                       </>
                     ) : (
                       <>
                         <Send size={20} />
-                        Send
+                        <span className="hidden sm:inline">Send</span>
                       </>
                     )}
                   </button>
