@@ -492,7 +492,6 @@ const LoanManagementSystem = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-600 mb-4 shadow-lg">
               <DollarSign size={40} className="text-white" />
             </div>
-          <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Loan Manager</h1>
             <p className="text-gray-600">Personal Loan Management System</p>
             {loading && (
