@@ -19,41 +19,45 @@ const LoanManagementSystem = () => {
   const [isTyping, setIsTyping] = useState(false);
 
   // Loan calculation functions
-  const calculateMonthlyPayment = (principal, rate, term, type) => {
+  const calculateMonthlyPayment = (principal, rate, term, type, startDate) => {
     const schedule = [];
     const monthlyRate = rate / 100;
+    const start = new Date(startDate);
     
     if (type === 'interest-only') {
       const monthlyInterest = (principal * rate) / 100;
       for (let i = 1; i <= term; i++) {
         const isLastMonth = i === term;
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
         schedule.push({
           month: i,
           payment: isLastMonth ? principal + monthlyInterest : monthlyInterest,
           principal: isLastMonth ? principal : 0,
           interest: monthlyInterest,
           balance: isLastMonth ? 0 : principal,
-          dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
           status: 'pending'
         });
       }
     } else if (type === 'flat-rate') {
-      // Flat Rate: Simple interest, equal monthly payments
-      // Total Interest = Principal × Rate × Term
-      // Monthly Payment = (Principal + Total Interest) / Term
       const totalInterest = (principal * rate * term) / 100;
       const monthlyPayment = (principal + totalInterest) / term;
       const principalPerMonth = principal / term;
       const interestPerMonth = totalInterest / term;
       
       for (let i = 1; i <= term; i++) {
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
         schedule.push({
           month: i,
           payment: monthlyPayment,
           principal: principalPerMonth,
           interest: interestPerMonth,
           balance: principal - (principalPerMonth * i),
-          dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
           status: 'pending'
         });
       }
@@ -66,13 +70,16 @@ const LoanManagementSystem = () => {
         const principalPaid = monthlyPayment - interest;
         balance -= principalPaid;
         
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
         schedule.push({
           month: i,
           payment: monthlyPayment,
           principal: principalPaid,
           interest: interest,
           balance: Math.max(0, balance),
-          dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
           status: 'pending'
         });
       }
@@ -85,13 +92,16 @@ const LoanManagementSystem = () => {
         const payment = principalPerMonth + interest;
         balance -= principalPerMonth;
         
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        
         schedule.push({
           month: i,
           payment: payment,
           principal: principalPerMonth,
           interest: interest,
           balance: Math.max(0, balance),
-          dueDate: new Date(Date.now() + (i * 30 * 24 * 60 * 60 * 1000)).toISOString().split('T')[0],
+          dueDate: dueDate.toISOString().split('T')[0],
           status: 'pending'
         });
       }
@@ -395,7 +405,8 @@ const LoanManagementSystem = () => {
         parseFloat(application.amount),
         parseFloat(rate),
         parseInt(application.term),
-        type
+        type,
+        new Date().toISOString().split('T')[0]
       );
 
       // Add Loan
@@ -631,7 +642,8 @@ const LoanManagementSystem = () => {
           parseFloat(formData.principal),
           parseFloat(formData.rate),
           parseInt(formData.term),
-          formData.type
+          formData.type,
+          formData.startDate
         );
 
         await fetch(GOOGLE_SHEETS_URL, {
@@ -912,7 +924,7 @@ const LoanManagementSystem = () => {
       try {
         schedule = typeof loan.schedule === 'string' ? JSON.parse(loan.schedule) : loan.schedule;
       } catch (e) {
-        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type);
+        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type, loan.startdate || new Date().toISOString().split('T')[0]);
       }
     }
 
@@ -1215,6 +1227,21 @@ const LoanManagementSystem = () => {
                       <span className="text-gray-600">Type</span>
                       <span className="font-bold text-gray-900 capitalize">{loan.type?.replace('-', ' ')}</span>
                     </div>
+                    <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <span className="text-blue-700 font-semibold">Loan Start Date</span>
+                      <span className="font-bold text-gray-900">{loan.startdate ? new Date(loan.startdate).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    {schedule.length > 0 && paidMonths.length < schedule.length && (
+                      <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <span className="text-purple-700 font-semibold">Next Due Date</span>
+                        <span className="font-bold text-gray-900">
+                          {(() => {
+                            const nextPayment = schedule.find(s => !paidMonths.includes(s.month));
+                            return nextPayment ? new Date(nextPayment.dueDate).toLocaleDateString() : 'N/A';
+                          })()}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
                       <span className="text-green-700 font-semibold">Total Paid</span>
                       <span className="font-bold text-2xl text-green-600">₱{totalPaid.toLocaleString()}</span>
@@ -1244,6 +1271,16 @@ const LoanManagementSystem = () => {
                   const hasProof = paymentProofs[payment.month];
                   const isOverdue = new Date(payment.dueDate) < new Date() && !isPaid;
                   
+                  // Calculate penalty: ₱25/day for overdue
+                  let penalty = 0;
+                  let daysOverdue = 0;
+                  if (isOverdue) {
+                    const today = new Date();
+                    const due = new Date(payment.dueDate);
+                    daysOverdue = Math.floor((today - due) / (1000 * 60 * 60 * 24));
+                    penalty = daysOverdue * 25;
+                  }
+                  
                   // Debug logging
                   const pendingForThisMonth = borrowerPayments.filter(p => parseInt(p.month) === payment.month && p.status === 'pending');
                   if (pendingForThisMonth.length > 0) {
@@ -1268,9 +1305,19 @@ const LoanManagementSystem = () => {
                             <p className={`text-sm flex items-center gap-1 ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               <Calendar size={14} />
                               Due: {new Date(payment.dueDate).toLocaleDateString()}
-                              {isOverdue && <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded">OVERDUE</span>}
+                              {isOverdue && <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded">OVERDUE {daysOverdue} days</span>}
                             </p>
-                            <p className="text-2xl font-bold text-gray-900 mt-1">₱{payment.payment.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-gray-900 mt-1">
+                              ₱{payment.payment.toFixed(2)}
+                              {penalty > 0 && (
+                                <span className="text-red-600 text-base ml-2">+ ₱{penalty} penalty</span>
+                              )}
+                            </p>
+                            {penalty > 0 && (
+                              <p className="text-sm text-red-600 font-semibold mt-1">
+                                Total due: ₱{(payment.payment + penalty).toFixed(2)}
+                              </p>
+                            )}
                             {payment.month === schedule.length && (
                               <p className="text-xs text-purple-600 font-semibold mt-1">
                                 Includes principal: ₱{parseFloat(loan.principal).toFixed(2)}
