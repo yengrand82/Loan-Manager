@@ -519,10 +519,6 @@ const LoanManagementSystem = () => {
           >
             Login
           </button>
-
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Admin: <span className="font-semibold">admin / admin</span>
-          </p>
         </div>
       </div>
     );
