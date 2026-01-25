@@ -146,6 +146,12 @@ const LoanManagementSystem = () => {
     setLoading(false);
   };
 
+  // Load data on initial mount so borrowers can log in
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Refresh data when user changes
   useEffect(() => {
     if (currentUser) {
       loadData();
@@ -490,6 +496,12 @@ const LoanManagementSystem = () => {
             <p className="text-gray-600">Personal Loan Management System</p>
           </div>
 
+          {loading && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
+              <p className="text-blue-700 text-sm">Loading data, please wait...</p>
+            </div>
+          )}
+
           <div className="mb-6">
             <div className="flex gap-2 mb-4">
               <button
@@ -517,14 +529,16 @@ const LoanManagementSystem = () => {
               placeholder={userType === 'admin' ? 'Enter password' : 'Enter Borrower ID (e.g., BRW001)'}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              disabled={loading}
             />
           </div>
 
           <button
             onClick={handleLogin}
-            className="w-full py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {loading ? 'Loading...' : 'Login'}
           </button>
         </div>
       </div>
