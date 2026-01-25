@@ -123,12 +123,13 @@ const LoanManagementSystem = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [borrowersRes, loansRes, paymentsRes, messagesRes, applicationsRes] = await Promise.all([
+      const [borrowersRes, loansRes, paymentsRes, messagesRes, applicationsRes, passwordRes] = await Promise.all([
         fetch(`${GOOGLE_SHEETS_URL}?action=getBorrowers`).then(r => r.json()).catch(() => []),
         fetch(`${GOOGLE_SHEETS_URL}?action=getLoans`).then(r => r.json()).catch(() => []),
         fetch(`${GOOGLE_SHEETS_URL}?action=getPayments`).then(r => r.json()).catch(() => []),
         fetch(`${GOOGLE_SHEETS_URL}?action=getMessages`).then(r => r.json()).catch(() => []),
-        fetch(`${GOOGLE_SHEETS_URL}?action=getApplications`).then(r => r.json()).catch(() => [])
+        fetch(`${GOOGLE_SHEETS_URL}?action=getApplications`).then(r => r.json()).catch(() => []),
+        fetch(`${GOOGLE_SHEETS_URL}?action=getAdminPassword`).then(r => r.json()).catch(() => ({ password: 'admin' }))
       ]);
       
       setBorrowers(borrowersRes || []);
@@ -136,6 +137,11 @@ const LoanManagementSystem = () => {
       setPayments(paymentsRes || []);
       setMessages(messagesRes || []);
       setApplications(applicationsRes || []);
+      
+      // Load admin password from Google Sheets
+      if (passwordRes && passwordRes.password) {
+        setAdminPassword(passwordRes.password);
+      }
       
       // Update selected borrower if it exists
       if (selectedBorrower) {
@@ -1937,7 +1943,7 @@ const LoanManagementSystem = () => {
       return { label: 'Strong', color: 'bg-green-500', width: '100%' };
     };
 
-    const handlePasswordChange = () => {
+    const handlePasswordChange = async () => {
       setError('');
       
       if (currentPassword !== adminPassword) {
@@ -1960,16 +1966,36 @@ const LoanManagementSystem = () => {
         return;
       }
       
-      setAdminPassword(newPassword);
-      setSuccess(true);
-      
-      setTimeout(() => {
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setSuccess(false);
-        setShowSettingsModal(false);
-      }, 2000);
+      // Save password to Google Sheets
+      try {
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'updateAdminPassword',
+            newPassword: newPassword
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          setAdminPassword(newPassword);
+          setSuccess(true);
+          
+          setTimeout(() => {
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setSuccess(false);
+            setShowSettingsModal(false);
+          }, 2000);
+        } else {
+          setError('Failed to save password: ' + (result.error || 'Unknown error'));
+        }
+      } catch (error) {
+        setError('Failed to save password: ' + error.message);
+        console.error('Password update error:', error);
+      }
     };
 
     const strength = getPasswordStrength(newPassword);
