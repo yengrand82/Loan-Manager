@@ -1830,19 +1830,30 @@ const LoanManagementSystem = () => {
             onClick={() => setShowGCashModal(false)}
           >
             <div 
-              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+              className="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-[90vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="text-center mb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
-                  <svg className="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-                  </svg>
+              {/* Header with X button */}
+              <div className="relative p-6 pb-4">
+                <button
+                  onClick={() => setShowGCashModal(false)}
+                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-all"
+                >
+                  <X size={20} className="text-gray-600" />
+                </button>
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
+                    <svg className="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Pay via GCash</h3>
+                  <p className="text-sm text-gray-600 mt-1">Scan QR code with your GCash app</p>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900">Pay via GCash</h3>
-                <p className="text-sm text-gray-600 mt-1">Scan QR code with your GCash app</p>
               </div>
+
+              {/* Scrollable Content */}
+              <div className="overflow-y-auto px-6 pb-4 flex-1">{/* Note: This div will contain the content below */}
 
               {/* Amount */}
               <div className="bg-blue-50 rounded-lg p-4 mb-4 border-2 border-blue-200">
@@ -1876,14 +1887,17 @@ const LoanManagementSystem = () => {
                   <li>Upload the receipt below</li>
                 </ol>
               </div>
+              </div>
 
-              {/* Close Button */}
-              <button
-                onClick={() => setShowGCashModal(false)}
-                className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-all"
-              >
-                Close
-              </button>
+              {/* Sticky Footer with Close Button */}
+              <div className="p-6 pt-3 border-t border-gray-200 bg-white rounded-b-2xl">
+                <button
+                  onClick={() => setShowGCashModal(false)}
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg"
+                >
+                  Done - Upload Receipt
+                </button>
+              </div>
             </div>
           </div>
         )}
