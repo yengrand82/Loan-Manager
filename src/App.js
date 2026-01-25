@@ -1296,10 +1296,10 @@ const LoanManagementSystem = () => {
                   }
                   
                   return (
-                    <div key={idx} className={`border-2 rounded-xl p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : isOverdue ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:shadow-md'}`}>
-                      <div className="flex items-center justify-between">
+                    <div key={idx} className={`border-2 rounded-xl p-4 sm:p-6 transition-all ${isPaid ? 'bg-green-50 border-green-300 shadow-md' : isOverdue ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:shadow-md'}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg ${isPaid ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`}>
+                          <div className={`w-14 h-14 flex-shrink-0 rounded-full flex items-center justify-center shadow-lg ${isPaid ? 'bg-green-500' : isOverdue ? 'bg-red-500' : 'bg-gray-300'}`}>
                             {isPaid ? (
                               <CheckCircle size={28} className="text-white" />
                             ) : isOverdue ? (
@@ -1308,9 +1308,9 @@ const LoanManagementSystem = () => {
                               <span className="text-white font-bold text-xl">{payment.month}</span>
                             )}
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <p className="font-bold text-gray-900 text-lg">Payment #{payment.month}</p>
-                            <p className={`text-sm flex items-center gap-1 ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                            <p className={`text-sm flex items-center gap-1 flex-wrap ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               <Calendar size={14} />
                               Due: {new Date(payment.dueDate).toLocaleDateString()}
                               {isOverdue && <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded">OVERDUE {daysOverdue} days</span>}
@@ -1340,10 +1340,10 @@ const LoanManagementSystem = () => {
                           </div>
                         </div>
                         
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto">
                           {isPaid ? (
-                            <div>
-                              <span className="px-6 py-3 bg-green-500 text-white rounded-lg font-bold text-lg shadow-lg flex items-center gap-2">
+                            <div className="w-full sm:w-auto">
+                              <span className="w-full sm:w-auto inline-flex justify-center px-6 py-3 bg-green-500 text-white rounded-lg font-bold text-lg shadow-lg items-center gap-2">
                                 <CheckCircle size={20} /> PAID
                               </span>
                               {paymentRecord && paymentRecord.proof && (
@@ -1388,7 +1388,7 @@ const LoanManagementSystem = () => {
                                   />
                                   <label
                                     htmlFor={`proof-${payment.month}`}
-                                    className={`px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center gap-2 ${
+                                    className={`w-full px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center justify-center gap-2 ${
                                       hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
                                     }`}
                                   >
@@ -1429,14 +1429,14 @@ const LoanManagementSystem = () => {
                                           alert('Error: ' + error.message);
                                         }
                                       }}
-                                      className="px-6 py-3 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-all shadow-lg"
+                                      className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition-all shadow-lg"
                                     >
                                       Submit for Approval
                                     </button>
                                   )}
                                   
                                   {!hasProof && (
-                                    <span className={`px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                                    <span className={`w-full px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
                                       {isOverdue ? 'OVERDUE' : 'PENDING'}
                                     </span>
                                   )}
@@ -1445,7 +1445,7 @@ const LoanManagementSystem = () => {
                               
                               {/* ADMIN: Can only view, not upload */}
                               {currentUser.type === 'admin' && (
-                                <span className={`px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
+                                <span className={`w-full px-6 py-3 rounded-lg font-bold border-2 text-center ${isOverdue ? 'bg-red-100 text-red-700 border-red-300' : 'bg-yellow-100 text-yellow-700 border-yellow-300'}`}>
                                   {isOverdue ? 'OVERDUE' : 'AWAITING BORROWER'}
                                 </span>
                               )}
