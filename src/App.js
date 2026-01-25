@@ -1137,8 +1137,7 @@ const LoanManagementSystem = () => {
 
           {/* Tabs */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
-            <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
-              <style>{`.flex::-webkit-scrollbar { display: none; }`}</style>
+            <div className="flex gap-2 overflow-x-auto pb-2 -webkit-overflow-scrolling-touch" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'}}>
               {[
                 { id: 'details', label: 'Details', icon: User },
                 { id: 'payments', label: 'Payments', icon: CreditCard },
