@@ -1493,7 +1493,7 @@ const LoanManagementSystem = () => {
                                 </button>
                               )}
                               {currentUser.type === 'admin' && (
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex flex-col sm:flex-row gap-2 mt-2">
                                   <button
                                     onClick={async () => {
                                       try {
@@ -1517,7 +1517,8 @@ const LoanManagementSystem = () => {
                                     className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 transition-all shadow-lg flex items-center justify-center gap-2"
                                   >
                                     <CheckCircle size={20} />
-                                    Approve & Mark as Paid
+                                    <span className="hidden sm:inline">Approve & Mark as Paid</span>
+                                    <span className="sm:hidden">Approve</span>
                                   </button>
                                   
                                   <button
@@ -1543,7 +1544,7 @@ const LoanManagementSystem = () => {
                                         alert('Error: ' + error.message);
                                       }
                                     }}
-                                    className="px-6 py-3 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                                    className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
                                   >
                                     <XCircle size={20} />
                                     Reject
