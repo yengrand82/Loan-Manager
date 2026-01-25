@@ -1822,14 +1822,26 @@ const LoanManagementSystem = () => {
           </div>
 
           {/* Tabs */}
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex gap-2">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div 
+              className="flex gap-2 overflow-x-auto pb-2" 
+              style={{
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none', 
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x'
+              }}
+            >
               {[
                 { id: 'dashboard', label: 'Dashboard', icon: Home },
                 { id: 'borrowers', label: 'Borrowers', icon: Users },
                 { id: 'applications', label: 'Applications', icon: Bell, badge: stats.pendingApplications }
               ].map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${activeTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10'}`}>
+                <button 
+                  key={tab.id} 
+                  onClick={() => setActiveTab(tab.id)} 
+                  className={`flex-shrink-0 px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10 rounded-t-lg'}`}
+                >
                   <tab.icon size={18} /> 
                   {tab.label}
                   {tab.badge > 0 && (
