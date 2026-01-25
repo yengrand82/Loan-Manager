@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle, Bell, MapPin } from 'lucide-react';
+import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Activity, AlertCircle, X, Check, Paperclip, Send, Calendar, ArrowLeft, Upload, Download, MessageSquare, Camera, History, User, Mail, Phone, CreditCard, CheckCircle, Clock, XCircle, Bell, MapPin, Settings, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 
 // IMPORTANT: Replace with your Google Sheets Web App URL
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
@@ -24,6 +24,8 @@ const LoanManagementSystem = () => {
   const [loading, setLoading] = useState(false);
   const [selectedBorrower, setSelectedBorrower] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('admin'); // Admin password (can be changed)
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Loan calculation functions
   const calculateMonthlyPayment = (principal, rate, term, type, startDate) => {
@@ -466,7 +468,7 @@ const LoanManagementSystem = () => {
     const [userType, setUserType] = useState('admin');
 
     const handleLogin = () => {
-      if (userType === 'admin' && loginId === 'admin') {
+      if (userType === 'admin' && loginId === adminPassword) {
         setCurrentUser({ id: 'admin', type: 'admin', name: 'Administrator' });
         setCurrentView('dashboard');
       } else {
@@ -486,18 +488,18 @@ const LoanManagementSystem = () => {
     };
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-600 to-purple-600">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-600 via-blue-600 to-purple-700">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md ring-1 ring-black/5 backdrop-blur-sm">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-600 mb-4 shadow-lg">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 mb-4 shadow-2xl ring-4 ring-blue-100">
               <DollarSign size={40} className="text-white" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">Loan Manager</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">Loan Manager</h1>
             <p className="text-gray-600">Personal Loan Management System</p>
             {loading && (
               <div className="flex items-center justify-center gap-2 mt-3 text-blue-600">
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
-                <span className="text-sm">Loading...</span>
+                <span className="text-sm font-semibold">Loading...</span>
               </div>
             )}
           </div>
@@ -506,18 +508,24 @@ const LoanManagementSystem = () => {
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setUserType('admin')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
-                  userType === 'admin' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  userType === 'admin' 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
                 }`}
               >
+                <Shield size={18} className="inline mr-2" />
                 Admin
               </button>
               <button
                 onClick={() => setUserType('borrower')}
-                className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
-                  userType === 'borrower' ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all duration-300 ${
+                  userType === 'borrower' 
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-md'
                 }`}
               >
+                <User size={18} className="inline mr-2" />
                 Borrower
               </button>
             </div>
@@ -527,8 +535,8 @@ const LoanManagementSystem = () => {
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
               placeholder={userType === 'admin' ? 'Enter password' : 'Enter Borrower ID (e.g., BRW001)'}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 transition-all"
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all duration-300 shadow-sm hover:border-gray-400 focus:shadow-lg"
+              onKeyPress={(e) => e.key === 'Enter' && !loading && handleLogin()}
               disabled={loading}
             />
           </div>
@@ -536,7 +544,7 @@ const LoanManagementSystem = () => {
           <button
             onClick={handleLogin}
             disabled={loading}
-            className="w-full py-3 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
           >
             {loading ? 'Loading...' : 'Login'}
           </button>
@@ -547,17 +555,17 @@ const LoanManagementSystem = () => {
 
   // Statistics Card
   const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 hover:shadow-xl transition-all transform hover:-translate-y-1" style={{ borderColor: color }}>
+    <div className="bg-white rounded-2xl shadow-xl p-6 border-l-4 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 ring-1 ring-black/5" style={{ borderColor: color }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-1 tracking-wide">{title}</p>
           <p className="text-3xl font-bold text-gray-900">{value}</p>
           {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
           {trend && <p className="text-sm font-semibold text-green-600 mt-2 flex items-center gap-1">
             <TrendingUp size={14} /> {trend}
           </p>}
         </div>
-        <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: `${color}20` }}>
+        <div className="w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white" style={{ backgroundColor: `${color}20` }}>
           <Icon size={32} style={{ color: color }} />
         </div>
       </div>
@@ -1912,6 +1920,183 @@ const LoanManagementSystem = () => {
     );
   };
 
+  // Password Change Modal
+  const PasswordChangeModal = () => {
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+
+    const getPasswordStrength = (password) => {
+      if (password.length === 0) return { label: '', color: '', width: '0%' };
+      if (password.length < 4) return { label: 'Weak', color: 'bg-red-500', width: '33%' };
+      if (password.length < 6) return { label: 'Medium', color: 'bg-yellow-500', width: '66%' };
+      return { label: 'Strong', color: 'bg-green-500', width: '100%' };
+    };
+
+    const handlePasswordChange = () => {
+      setError('');
+      
+      if (currentPassword !== adminPassword) {
+        setError('Current password is incorrect');
+        return;
+      }
+      
+      if (newPassword.length < 4) {
+        setError('New password must be at least 4 characters');
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        setError('New passwords do not match');
+        return;
+      }
+      
+      if (newPassword === currentPassword) {
+        setError('New password must be different from current password');
+        return;
+      }
+      
+      setAdminPassword(newPassword);
+      setSuccess(true);
+      
+      setTimeout(() => {
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setSuccess(false);
+        setShowSettingsModal(false);
+      }, 2000);
+    };
+
+    const strength = getPasswordStrength(newPassword);
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowSettingsModal(false)}>
+        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl ring-1 ring-black/5" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-lg">
+                  <Lock size={24} />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold">Change Password</h3>
+                  <p className="text-sm text-blue-100">Update your admin password</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSettingsModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all">
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {success ? (
+              <div className="text-center py-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                  <Check size={32} className="text-green-600" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-2">Password Changed!</h4>
+                <p className="text-gray-600">Your password has been updated successfully.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {error && (
+                  <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 flex items-center gap-2 text-red-700">
+                    <AlertCircle size={20} />
+                    <p className="text-sm font-semibold">{error}</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all shadow-sm hover:border-gray-400"
+                      placeholder="Enter current password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all shadow-sm hover:border-gray-400"
+                      placeholder="Enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    </button>
+                  </div>
+                  {newPassword && (
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600">Password Strength:</span>
+                        <span className={`text-xs font-semibold ${strength.color.replace('bg-', 'text-')}`}>{strength.label}</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full ${strength.color} transition-all duration-300`} style={{ width: strength.width }}></div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all shadow-sm hover:border-gray-400"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={() => setShowSettingsModal(false)}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePasswordChange}
+                    disabled={!currentPassword || !newPassword || !confirmPassword}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                  >
+                    Change Password
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Admin Dashboard
   const AdminDashboard = () => {
     const stats = getStats();
@@ -1923,21 +2108,34 @@ const LoanManagementSystem = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-purple-600 text-white shadow-2xl">
-          <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-700 text-white shadow-2xl">
+          <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-lg flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-xl flex items-center justify-center shadow-xl ring-2 ring-white/30">
                   <DollarSign size={32} />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                  <p className="text-sm text-blue-100">Loan Management System</p>
+                  <h1 className="text-4xl font-bold drop-shadow-lg tracking-tight">Admin Dashboard</h1>
+                  <p className="text-sm text-blue-100 mt-1">Loan Management System</p>
                 </div>
               </div>
-              <button onClick={() => { setCurrentUser(null); setCurrentView('login'); }} className="px-6 py-3 bg-white/20 backdrop-blur-lg text-white rounded-lg hover:bg-white/30 transition-all flex items-center gap-2 shadow-lg">
-                <LogOut size={20} /> Logout
-              </button>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setShowSettingsModal(true)} 
+                  className="px-4 sm:px-6 py-3 bg-white/20 backdrop-blur-lg text-white rounded-xl hover:bg-white/30 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform"
+                >
+                  <Settings size={20} /> 
+                  <span className="hidden sm:inline">Settings</span>
+                </button>
+                <button 
+                  onClick={() => { setCurrentUser(null); setCurrentView('login'); }} 
+                  className="px-4 sm:px-6 py-3 bg-white/20 backdrop-blur-lg text-white rounded-xl hover:bg-white/30 transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform"
+                >
+                  <LogOut size={20} /> 
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -2204,6 +2402,9 @@ const LoanManagementSystem = () => {
             </>
           )}
         </div>
+        
+        {/* Settings Modal */}
+        {showSettingsModal && <PasswordChangeModal />}
       </div>
     );
   };
