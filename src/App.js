@@ -1669,15 +1669,6 @@ const LoanManagementSystem = () => {
                 Messages
               </h2>
               
-              {/* Debug Info */}
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg text-xs">
-                <p><strong>Debug:</strong></p>
-                <p>Current User: {currentUser?.id} ({currentUser?.type})</p>
-                <p>Selected Borrower: {selectedBorrower?.id}</p>
-                <p>Total Messages: {messages.length}</p>
-                <p>Filtered Messages: {borrowerMessages.length}</p>
-              </div>
-              
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto bg-gray-50 rounded-lg p-4">
                 {borrowerMessages.length === 0 ? (
                   <div className="text-center py-12">
@@ -1760,7 +1751,10 @@ const LoanManagementSystem = () => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onFocus={() => setIsTyping(true)}
-                    onBlur={() => setIsTyping(false)}
+                    onBlur={() => {
+                      // Delay to prevent blur from interfering with button click
+                      setTimeout(() => setIsTyping(false), 200);
+                    }}
                     placeholder={attachmentName ? "Add message..." : "Type message..."}
                     className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                     onKeyPress={(e) => {
@@ -1772,6 +1766,10 @@ const LoanManagementSystem = () => {
                   />
                   
                   <button
+                    onMouseDown={(e) => {
+                      // Prevent input blur from canceling the click on mobile
+                      e.preventDefault();
+                    }}
                     onClick={handleSendMessage}
                     disabled={(!newMessage.trim() && !attachment) || sendingMessage}
                     className={`flex-shrink-0 px-4 py-3 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg ${
