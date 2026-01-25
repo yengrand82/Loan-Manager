@@ -4,6 +4,13 @@ import { DollarSign, Users, FileText, LogOut, Plus, Trash2, Home, TrendingUp, Ac
 // IMPORTANT: Replace with your Google Sheets Web App URL
 const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzN5S5EzI9JEcKuyr5VpAtk9Cnyn8oCNyDqPLZcc4eXr3KBPmuE4xvpegXkBIqc9ls/exec';
 
+// GCash Payment QR Code (Google Drive direct image link)
+// Original link: https://drive.google.com/file/d/1O_goLwqhMQgnoaJUA21axEyqZsKeHg1t/view?usp=drive_link
+// Direct image link format: https://drive.google.com/uc?export=view&id=FILE_ID
+const GCASH_QR_CODE = 'https://drive.google.com/uc?export=view&id=1O_goLwqhMQgnoaJUA21axEyqZsKeHg1t';
+const GCASH_NAME = 'AI***N L** G.';
+const GCASH_NUMBER = '+1 ••••••3410';
+
 const LoanManagementSystem = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [currentView, setCurrentView] = useState('login');
@@ -914,6 +921,8 @@ const LoanManagementSystem = () => {
     const [paymentProofs, setPaymentProofs] = useState({});
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [sendingMessage, setSendingMessage] = useState(false);
+    const [showGCashModal, setShowGCashModal] = useState(false);
+    const [gcashPaymentAmount, setGcashPaymentAmount] = useState(0);
 
     let schedule = [];
     if (loan && loan.schedule) {
@@ -1375,6 +1384,20 @@ const LoanManagementSystem = () => {
                               {/* BORROWER: Can upload proof */}
                               {currentUser.type === 'borrower' && (
                                 <>
+                                  {/* Pay via GCash Button */}
+                                  <button
+                                    onClick={() => {
+                                      setGcashPaymentAmount(payment.payment);
+                                      setShowGCashModal(true);
+                                    }}
+                                    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                                  >
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                                    </svg>
+                                    Pay via GCash
+                                  </button>
+                                  
                                   <input
                                     type="file"
                                     accept="image/*,.pdf"
@@ -1385,11 +1408,11 @@ const LoanManagementSystem = () => {
                                   <label
                                     htmlFor={`proof-${payment.month}`}
                                     className={`w-full px-6 py-3 rounded-lg font-semibold cursor-pointer transition-all flex items-center justify-center gap-2 ${
-                                      hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'
+                                      hasProof ? 'bg-green-100 text-green-700 border-2 border-green-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
                                   >
                                     <Upload size={18} />
-                                    {hasProof ? 'Proof Uploaded ✓' : 'Upload Proof'}
+                                    {hasProof ? 'Receipt Uploaded ✓' : 'Upload GCash Receipt'}
                                   </label>
                                   
                                   {hasProof && (
@@ -1785,6 +1808,71 @@ const LoanManagementSystem = () => {
             </div>
           )}
         </div>
+
+        {/* GCash Payment Modal */}
+        {showGCashModal && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+            onClick={() => setShowGCashModal(false)}
+          >
+            <div 
+              className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="text-center mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-3">
+                  <svg className="w-10 h-10 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900">Pay via GCash</h3>
+                <p className="text-sm text-gray-600 mt-1">Scan QR code with your GCash app</p>
+              </div>
+
+              {/* Amount */}
+              <div className="bg-blue-50 rounded-lg p-4 mb-4 border-2 border-blue-200">
+                <p className="text-sm text-blue-700 font-semibold text-center">Amount to Pay</p>
+                <p className="text-3xl font-bold text-blue-900 text-center">₱{gcashPaymentAmount.toFixed(2)}</p>
+              </div>
+
+              {/* QR Code */}
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 mb-4">
+                <div className="bg-white rounded-lg p-4">
+                  <img 
+                    src={GCASH_QR_CODE} 
+                    alt="GCash QR Code" 
+                    className="w-full h-auto rounded-lg"
+                  />
+                </div>
+                <div className="text-center mt-3 text-white">
+                  <p className="font-bold text-lg">{GCASH_NAME}</p>
+                  <p className="text-sm opacity-90">{GCASH_NUMBER}</p>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-4 mb-4">
+                <p className="text-sm font-semibold text-yellow-800 mb-2">📱 Instructions:</p>
+                <ol className="text-xs text-yellow-700 space-y-1 list-decimal list-inside">
+                  <li>Open your GCash app</li>
+                  <li>Tap "Scan QR" and scan the code above</li>
+                  <li>Confirm payment of ₱{gcashPaymentAmount.toFixed(2)}</li>
+                  <li>Take a screenshot of the receipt</li>
+                  <li>Upload the receipt below</li>
+                </ol>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={() => setShowGCashModal(false)}
+                className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
