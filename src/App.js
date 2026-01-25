@@ -1970,40 +1970,44 @@ const LoanManagementSystem = () => {
                           const progress = totalBorrowed > 0 ? (totalPaid / totalBorrowed) * 100 : 0;
 
                           return (
-                            <div key={borrower.id} className="border-2 border-gray-200 rounded-xl p-6 hover:shadow-xl transition-all cursor-pointer hover:border-blue-400" onClick={() => setSelectedBorrower(borrower)}>
-                              <div className="flex items-center justify-between mb-4">
+                            <div key={borrower.id} className="border-2 border-gray-200 rounded-xl p-4 hover:shadow-xl transition-all cursor-pointer hover:border-blue-400" onClick={() => setSelectedBorrower(borrower)}>
+                              {/* Mobile Layout */}
+                              <div className="flex flex-col gap-4">
+                                {/* Top Row: Photo, Name, Progress */}
                                 <div className="flex items-center gap-4">
                                   {borrower.photo ? (
-                                    <img src={borrower.photo} alt={borrower.name} className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 shadow-lg" />
+                                    <img src={borrower.photo} alt={borrower.name} className="w-16 h-16 flex-shrink-0 rounded-full object-cover border-2 border-blue-500 shadow-lg" />
                                   ) : (
-                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                                    <div className="w-16 h-16 flex-shrink-0 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
                                       {borrower.name.charAt(0)}
                                     </div>
                                   )}
-                                  <div>
-                                    <h3 className="font-bold text-gray-900 text-xl">{borrower.name}</h3>
-                                    {loan && <p className="text-gray-600">₱{parseFloat(loan.principal || 0).toLocaleString()} @ {loan.rate}%</p>}
-                                    <p className="text-sm text-gray-500">ID: {borrower.id}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-gray-900 text-lg truncate">{borrower.name}</h3>
+                                    {loan && <p className="text-sm text-gray-600 truncate">₱{parseFloat(loan.principal || 0).toLocaleString()} @ {loan.rate}%</p>}
+                                    <p className="text-xs text-gray-500">ID: {borrower.id}</p>
                                   </div>
-                                </div>
-                                <div className="flex items-center gap-4">
                                   <div className="text-right">
-                                    <p className="text-sm text-gray-600">Progress</p>
-                                    <p className="text-2xl font-bold text-blue-600">{progress.toFixed(1)}%</p>
+                                    <p className="text-xs text-gray-600">Progress</p>
+                                    <p className="text-xl font-bold text-blue-600">{progress.toFixed(1)}%</p>
                                   </div>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedBorrower(borrower);
-                                    }}
-                                    className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold shadow-lg"
-                                  >
-                                    View Profile
-                                  </button>
                                 </div>
-                              </div>
-                              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                                
+                                {/* Progress Bar */}
+                                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+                                </div>
+                                
+                                {/* Button */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedBorrower(borrower);
+                                  }}
+                                  className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold shadow-lg"
+                                >
+                                  View Profile
+                                </button>
                               </div>
                             </div>
                           );
