@@ -492,15 +492,16 @@ const LoanManagementSystem = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-600 mb-4 shadow-lg">
               <DollarSign size={40} className="text-white" />
             </div>
+          <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Loan Manager</h1>
             <p className="text-gray-600">Personal Loan Management System</p>
+            {loading && (
+              <div className="flex items-center justify-center gap-2 mt-3 text-blue-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                <span className="text-sm">Loading...</span>
+              </div>
+            )}
           </div>
-
-          {loading && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center">
-              <p className="text-blue-700 text-sm">Loading data, please wait...</p>
-            </div>
-          )}
 
           <div className="mb-6">
             <div className="flex gap-2 mb-4">
