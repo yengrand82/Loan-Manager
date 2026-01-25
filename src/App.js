@@ -1136,8 +1136,9 @@ const LoanManagementSystem = () => {
           </div>
 
           {/* Tabs */}
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex gap-2">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="flex gap-2 overflow-x-auto pb-2" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+              <style>{`.flex::-webkit-scrollbar { display: none; }`}</style>
               {[
                 { id: 'details', label: 'Details', icon: User },
                 { id: 'payments', label: 'Payments', icon: CreditCard },
@@ -1148,7 +1149,7 @@ const LoanManagementSystem = () => {
                 <button 
                   key={tab.id} 
                   onClick={() => setProfileTab(tab.id)} 
-                  className={`px-6 py-3 font-semibold transition-all flex items-center gap-2 ${profileTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+                  className={`flex-shrink-0 px-6 py-3 font-semibold transition-all flex items-center gap-2 whitespace-nowrap ${profileTab === tab.id ? 'bg-white text-blue-600 rounded-t-lg shadow-lg' : 'text-white/80 hover:text-white hover:bg-white/10 rounded-t-lg'}`}
                 >
                   <tab.icon size={18} /> 
                   {tab.label}
@@ -1161,7 +1162,7 @@ const LoanManagementSystem = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           {/* Details Tab */}
           {profileTab === 'details' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
