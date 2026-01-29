@@ -27,6 +27,21 @@ const LoanManagementSystem = () => {
   const [adminPassword, setAdminPassword] = useState('admin'); // Admin password (can be changed)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+  // Helper function to add months properly (handles month-end dates)
+  const addMonthsToDate = (date, months) => {
+    const result = new Date(date);
+    const startDay = result.getDate();
+    
+    result.setMonth(result.getMonth() + months);
+    
+    // If the day changed (e.g., Jan 31 -> Feb 28), set it back to the last day of the month
+    if (result.getDate() !== startDay) {
+      result.setDate(0); // Sets to last day of previous month
+    }
+    
+    return result;
+  };
+
   // Loan calculation functions
   const calculateMonthlyPayment = (principal, rate, term, type, startDate) => {
     const schedule = [];
@@ -37,8 +52,7 @@ const LoanManagementSystem = () => {
       const monthlyInterest = (principal * rate) / 100;
       for (let i = 1; i <= term; i++) {
         const isLastMonth = i === term;
-        const dueDate = new Date(start);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        const dueDate = addMonthsToDate(start, i);
         
         schedule.push({
           month: i,
@@ -57,8 +71,7 @@ const LoanManagementSystem = () => {
       const interestPerMonth = totalInterest / term;
       
       for (let i = 1; i <= term; i++) {
-        const dueDate = new Date(start);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        const dueDate = addMonthsToDate(start, i);
         
         schedule.push({
           month: i,
@@ -79,8 +92,7 @@ const LoanManagementSystem = () => {
         const principalPaid = monthlyPayment - interest;
         balance -= principalPaid;
         
-        const dueDate = new Date(start);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        const dueDate = addMonthsToDate(start, i);
         
         schedule.push({
           month: i,
@@ -101,8 +113,7 @@ const LoanManagementSystem = () => {
         const payment = principalPerMonth + interest;
         balance -= principalPerMonth;
         
-        const dueDate = new Date(start);
-        dueDate.setMonth(dueDate.getMonth() + i);
+        const dueDate = addMonthsToDate(start, i);
         
         schedule.push({
           month: i,
