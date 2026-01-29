@@ -57,7 +57,12 @@ const LoanManagementSystem = () => {
   const calculateMonthlyPayment = (principal, rate, term, type, startDate) => {
     const schedule = [];
     const monthlyRate = rate / 100;
-    const start = new Date(startDate);
+    
+    // Parse date correctly to avoid timezone issues
+    // startDate format is "YYYY-MM-DD"
+    const [year, month, day] = startDate.split('-').map(Number);
+    const start = new Date(year, month - 1, day); // month is 0-indexed in JS
+    
     
     if (type === 'interest-only') {
       const monthlyInterest = (principal * rate) / 100;
