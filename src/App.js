@@ -34,12 +34,23 @@ const LoanManagementSystem = () => {
     
     result.setMonth(result.getMonth() + months);
     
-    // If the day changed (e.g., Jan 31 -> Feb 28), set it back to the last day of the month
-    if (result.getDate() !== startDay) {
-      result.setDate(0); // Sets to last day of previous month
-    }
+    // If the day changed (e.g., Jan 31 -> Feb 28), it means the target month
+    // doesn't have that many days. Keep it as the last day of that month.
+    // But if we want to maintain the original day for future months, we need
+    // to track the intended day separately from the actual date.
     
-    return result;
+    // Better approach: add months to year/month, then set day to min(startDay, lastDayOfMonth)
+    const targetMonth = new Date(date).getMonth() + months;
+    const targetYear = new Date(date).getFullYear() + Math.floor(targetMonth / 12);
+    const normalizedMonth = ((targetMonth % 12) + 12) % 12;
+    
+    // Get last day of target month
+    const lastDay = new Date(targetYear, normalizedMonth + 1, 0).getDate();
+    
+    // Use original day or last day of month, whichever is smaller
+    const finalDay = Math.min(startDay, lastDay);
+    
+    return new Date(targetYear, normalizedMonth, finalDay);
   };
 
   // Loan calculation functions
