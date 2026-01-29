@@ -27,6 +27,14 @@ const LoanManagementSystem = () => {
   const [adminPassword, setAdminPassword] = useState('admin'); // Admin password (can be changed)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
+  // Helper to format date as YYYY-MM-DD in local timezone (avoids UTC conversion issues)
+  const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Helper function to add months properly (handles month-end dates)
   const addMonthsToDate = (date, months) => {
     const result = new Date(date);
@@ -76,7 +84,7 @@ const LoanManagementSystem = () => {
           principal: isLastMonth ? principal : 0,
           interest: monthlyInterest,
           balance: isLastMonth ? 0 : principal,
-          dueDate: dueDate.toISOString().split('T')[0],
+          dueDate: formatLocalDate(dueDate),
           status: 'pending'
         });
       }
@@ -95,7 +103,7 @@ const LoanManagementSystem = () => {
           principal: principalPerMonth,
           interest: interestPerMonth,
           balance: principal - (principalPerMonth * i),
-          dueDate: dueDate.toISOString().split('T')[0],
+          dueDate: formatLocalDate(dueDate),
           status: 'pending'
         });
       }
@@ -116,7 +124,7 @@ const LoanManagementSystem = () => {
           principal: principalPaid,
           interest: interest,
           balance: Math.max(0, balance),
-          dueDate: dueDate.toISOString().split('T')[0],
+          dueDate: formatLocalDate(dueDate),
           status: 'pending'
         });
       }
@@ -137,7 +145,7 @@ const LoanManagementSystem = () => {
           principal: principalPerMonth,
           interest: interest,
           balance: Math.max(0, balance),
-          dueDate: dueDate.toISOString().split('T')[0],
+          dueDate: formatLocalDate(dueDate),
           status: 'pending'
         });
       }
