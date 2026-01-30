@@ -34,14 +34,6 @@ const LoanManagementSystem = () => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-// Helper to parse date string (YYYY-MM-DD) in LOCAL timezone
-  // Prevents timezone conversion issues when displaying dates
-  const parseLocalDate = (dateString) => {
-    if (!dateString) return new Date();
-    if (dateString instanceof Date) return dateString;
-    const [year, month, day] = dateString.split("-").map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   // Helper function to add months properly (handles month-end dates)
   const addMonthsToDate = (date, months) => {
@@ -649,7 +641,7 @@ const LoanManagementSystem = () => {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-3">
-              Applied: {parseLocalDate(app.timestamp).toLocaleString()}
+              Applied: {new Date(app.timestamp).toLocaleString()}
             </p>
           </div>
         </div>
@@ -1192,7 +1184,7 @@ const LoanManagementSystem = () => {
                   {nextDue && (
                     <p className="text-xs text-blue-100 mt-1 flex items-center gap-1">
                       <Clock size={14} />
-                      Next due: {parseLocalDate(nextDue.dueDate).toLocaleDateString()} - ₱{nextDue.payment.toFixed(2)}
+                      Next due: {new Date(nextDue.dueDate).toLocaleDateString()} - ₱{nextDue.payment.toFixed(2)}
                     </p>
                   )}
                 </div>
@@ -1281,7 +1273,7 @@ const LoanManagementSystem = () => {
                     <div>
                       <p className="text-sm text-gray-600">Member Since</p>
                       <p className="font-semibold text-gray-900">
-                        {borrower.createddate ? parseLocalDate(borrower.createddate).toLocaleDateString() : 'N/A'}
+                        {borrower.createddate ? new Date(borrower.createddate).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -1313,7 +1305,7 @@ const LoanManagementSystem = () => {
                     </div>
                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <span className="text-blue-700 font-semibold">Loan Start Date</span>
-                      <span className="font-bold text-gray-900">{loan.startdate ? parseLocalDate(loan.startdate).toLocaleDateString() : 'N/A'}</span>
+                      <span className="font-bold text-gray-900">{loan.startdate ? new Date(loan.startdate).toLocaleDateString() : 'N/A'}</span>
                     </div>
                     {schedule.length > 0 && paidMonths.length < schedule.length && (
                       <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border border-purple-200">
@@ -1321,7 +1313,7 @@ const LoanManagementSystem = () => {
                         <span className="font-bold text-gray-900">
                           {(() => {
                             const nextPayment = schedule.find(s => !paidMonths.includes(s.month));
-                            return nextPayment ? parseLocalDate(nextPayment.dueDate).toLocaleDateString() : 'N/A';
+                            return nextPayment ? new Date(nextPayment.dueDate).toLocaleDateString() : 'N/A';
                           })()}
                         </span>
                       </div>
@@ -1353,14 +1345,14 @@ const LoanManagementSystem = () => {
                   const isPaid = paidMonths.includes(payment.month);
                   const paymentRecord = borrowerPayments.find(p => parseInt(p.month) === payment.month);
                   const hasProof = paymentProofs[payment.month];
-                  const isOverdue = parseLocalDate(payment.dueDate) < new Date() && !isPaid;
+                  const isOverdue = new Date(payment.dueDate) < new Date() && !isPaid;
                   
                   // Calculate penalty: ₱25/day for overdue
                   let penalty = 0;
                   let daysOverdue = 0;
                   if (isOverdue) {
                     const today = new Date();
-                    const due = parseLocalDate(payment.dueDate);
+                    const due = new Date(payment.dueDate);
                     daysOverdue = Math.floor((today - due) / (1000 * 60 * 60 * 24));
                     penalty = daysOverdue * 25;
                   }
@@ -1388,7 +1380,7 @@ const LoanManagementSystem = () => {
                             <p className="font-bold text-gray-900 text-lg">Payment #{payment.month}</p>
                             <p className={`text-sm flex items-center gap-1 flex-wrap ${isOverdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
                               <Calendar size={14} />
-                              Due: {parseLocalDate(payment.dueDate).toLocaleDateString()}
+                              Due: {new Date(payment.dueDate).toLocaleDateString()}
                               {isOverdue && <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded">OVERDUE {daysOverdue} days</span>}
                             </p>
                             <p className="text-2xl font-bold text-gray-900 mt-1">
@@ -1410,7 +1402,7 @@ const LoanManagementSystem = () => {
                             {isPaid && paymentRecord && (
                               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
                                 <Check size={12} />
-                                Paid on {parseLocalDate(paymentRecord.paymentdate).toLocaleDateString()}
+                                Paid on {new Date(paymentRecord.paymentdate).toLocaleDateString()}
                               </p>
                             )}
                           </div>
@@ -1550,7 +1542,7 @@ const LoanManagementSystem = () => {
                                 {currentUser.type === 'admin' ? 'Awaiting Your Approval' : 'Pending Admin Approval'}
                               </p>
                               <p className="text-xs text-orange-600 mt-1">
-                                Submitted: {parseLocalDate(pendingPayment.paymentdate).toLocaleDateString()}
+                                Submitted: {new Date(pendingPayment.paymentdate).toLocaleDateString()}
                               </p>
                               {pendingPayment.proof && (
                                 <button
@@ -1677,7 +1669,7 @@ const LoanManagementSystem = () => {
                           <p className="font-bold text-gray-900">Month {payment.month} Payment</p>
                           <p className="text-sm text-gray-600 flex items-center gap-1">
                             <Calendar size={14} />
-                            {parseLocalDate(payment.paymentdate).toLocaleDateString()} at {parseLocalDate(payment.paymentdate).toLocaleTimeString()}
+                            {new Date(payment.paymentdate).toLocaleDateString()} at {new Date(payment.paymentdate).toLocaleTimeString()}
                           </p>
                         </div>
                       </div>
@@ -1752,7 +1744,7 @@ const LoanManagementSystem = () => {
                           )}
                           {msg.message && <p className="break-words text-lg">{msg.message}</p>}
                           <p className={`text-xs mt-2 ${isSentByMe ? 'text-blue-100' : 'text-gray-500'}`}>
-                            {parseLocalDate(msg.timestamp).toLocaleString()}
+                            {new Date(msg.timestamp).toLocaleString()}
                           </p>
                         </div>
                       </div>
@@ -1868,7 +1860,7 @@ const LoanManagementSystem = () => {
                           <p className="font-bold text-gray-900">₱{parseFloat(app.amount).toLocaleString()}</p>
                           <p className="text-sm text-gray-600">{app.purpose}</p>
                           <p className="text-xs text-gray-500 mt-1">
-                            Submitted: {parseLocalDate(app.timestamp).toLocaleDateString()}
+                            Submitted: {new Date(app.timestamp).toLocaleDateString()}
                           </p>
                         </div>
                         <span className={`px-4 py-2 rounded-lg font-bold ${
@@ -2329,7 +2321,7 @@ const LoanManagementSystem = () => {
                                 <div>
                                   <p className="font-bold text-gray-900">{borrower?.name || 'Unknown'}</p>
                                   <p className="text-sm text-gray-600">
-                                    {parseLocalDate(payment.paymentdate).toLocaleDateString()}
+                                    {new Date(payment.paymentdate).toLocaleDateString()}
                                   </p>
                                 </div>
                               </div>
@@ -2453,7 +2445,7 @@ const LoanManagementSystem = () => {
                           <div>
                             <p className="font-bold text-gray-900">{app.borrowername}</p>
                             <p className="text-sm text-gray-600">₱{parseFloat(app.amount).toLocaleString()} • {app.term} months</p>
-                            <p className="text-xs text-gray-500">{parseLocalDate(app.timestamp).toLocaleDateString()}</p>
+                            <p className="text-xs text-gray-500">{new Date(app.timestamp).toLocaleDateString()}</p>
                           </div>
                           <span className={`px-4 py-2 rounded-lg font-bold ${
                             app.status === 'approved' ? 'bg-green-100 text-green-700' :
