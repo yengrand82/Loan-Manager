@@ -303,7 +303,7 @@ const LoanManagementSystem = () => {
         borrowerId: selectedBorrower.id,
         amount: amount,
         month: month,
-        paymentDate: new Date().toISOString(),
+        paymentDate: formatLocalDate(new Date()),
         proof: proof || '',
         status: 'completed'
       };
@@ -360,7 +360,7 @@ const LoanManagementSystem = () => {
         receiverid: currentUser.type === 'admin' ? selectedBorrower.id : 'admin',
         message: messageText,
         image: attachment || '',
-        timestamp: new Date().toISOString(),
+        timestamp: formatLocalDate(new Date()),
         read: false
       };
       
@@ -428,7 +428,7 @@ const LoanManagementSystem = () => {
         term: applicationData.term,
         income: applicationData.income,
         employment: applicationData.employment,
-        timestamp: new Date().toISOString(),
+        timestamp: formatLocalDate(new Date()),
         status: 'pending'
       };
       
@@ -462,7 +462,7 @@ const LoanManagementSystem = () => {
         parseFloat(rate),
         parseInt(application.term),
         type,
-        new Date().toISOString().split('T')[0]
+        formatLocalDate(new Date())
       );
 
       // Add Loan
@@ -477,7 +477,7 @@ const LoanManagementSystem = () => {
             principal: parseFloat(application.amount),
             rate: parseFloat(rate),
             term: parseInt(application.term),
-            startDate: new Date().toISOString().split('T')[0],
+            startDate: formatLocalDate(new Date()),
             status: 'active',
             schedule: JSON.stringify(schedule)
           }
@@ -687,7 +687,7 @@ const LoanManagementSystem = () => {
   // Add Borrower Form
   const AddBorrowerForm = ({ onSuccess }) => {
     const [formData, setFormData] = useState({
-      name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0]
+      name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: formatLocalDate(new Date())
     });
     const [photo, setPhoto] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -746,7 +746,7 @@ const LoanManagementSystem = () => {
         });
 
         alert('✅ Borrower added successfully!');
-        setFormData({ name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: new Date().toISOString().split('T')[0] });
+        setFormData({ name: '', email: '', contact: '', address: '', principal: '', rate: '', term: '3', type: 'flat-rate', startDate: formatLocalDate(new Date()) });
         setPhoto(null);
         if (onSuccess) onSuccess();
       } catch (error) {
@@ -992,7 +992,7 @@ const LoanManagementSystem = () => {
       try {
         schedule = typeof loan.schedule === 'string' ? JSON.parse(loan.schedule) : loan.schedule;
       } catch (e) {
-        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type, loan.startdate || new Date().toISOString().split('T')[0]);
+        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type, loan.startdate || formatLocalDate(new Date()));
       }
     }
 
@@ -1491,7 +1491,7 @@ const LoanManagementSystem = () => {
                                             borrowerId: borrower.id,
                                             amount: payment.payment,
                                             month: payment.month,
-                                            paymentDate: new Date().toISOString(),
+                                            paymentDate: formatLocalDate(new Date()),
                                             proof: proof,
                                             status: 'pending'
                                           };
@@ -2477,4 +2477,3 @@ const LoanManagementSystem = () => {
 };
 
 export default LoanManagementSystem;
-// Force rebuild Thu Jan 29 21:03:54 EST 2026
