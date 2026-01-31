@@ -40,6 +40,12 @@ const LoanManagementSystem = () => {
   const parseLocalDate = (dateString) => {
     if (!dateString) return new Date();
     if (dateString instanceof Date) return dateString;
+    
+    // Handle ISO format with timestamp (e.g., "2026-02-15T05:00:00.000Z")
+    if (dateString.includes('T')) {
+      dateString = dateString.split('T')[0]; // Extract just the date part
+    }
+    
     const [year, month, day] = dateString.split('-').map(Number);
     return new Date(year, month - 1, day);
   };
@@ -178,8 +184,6 @@ const LoanManagementSystem = () => {
       
       setBorrowers(borrowersRes || []);
       setLoans(loansRes || []);
-      console.log("First loan:", loansRes[0]);
-      console.log("Loan keys:", loansRes[0] ? Object.keys(loansRes[0]) : "no loans");
       setPayments(paymentsRes || []);
       setMessages(messagesRes || []);
       setApplications(applicationsRes || []);
@@ -1317,10 +1321,7 @@ const LoanManagementSystem = () => {
                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <span className="text-blue-700 font-semibold">Loan Start Date</span>
                       <span className="font-bold text-gray-900">
-                        {(() => {
-                          const startDateValue = loan.startdate || loan.StartDate || loan.startDate;
-                          return startDateValue ? parseLocalDate(startDateValue).toLocaleDateString() : 'N/A';
-                        })()}
+                        {loan.startdate ? parseLocalDate(loan.startdate).toLocaleDateString() : 'N/A'}
                       </span>
                     </div>
                     {schedule.length > 0 && paidMonths.length < schedule.length && (
