@@ -178,6 +178,8 @@ const LoanManagementSystem = () => {
       
       setBorrowers(borrowersRes || []);
       setLoans(loansRes || []);
+      console.log("First loan:", loansRes[0]);
+      console.log("Loan keys:", loansRes[0] ? Object.keys(loansRes[0]) : "no loans");
       setPayments(paymentsRes || []);
       setMessages(messagesRes || []);
       setApplications(applicationsRes || []);
