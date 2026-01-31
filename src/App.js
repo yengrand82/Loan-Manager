@@ -1001,7 +1001,7 @@ const LoanManagementSystem = () => {
       try {
         schedule = typeof loan.schedule === 'string' ? JSON.parse(loan.schedule) : loan.schedule;
       } catch (e) {
-        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type, loan.startdate || formatLocalDate(new Date()));
+        schedule = calculateMonthlyPayment(loan.principal, loan.rate, loan.term, loan.type, loan.startdate || loan.StartDate || loan.startDate || formatLocalDate(new Date()));
       }
     }
 
@@ -1314,7 +1314,12 @@ const LoanManagementSystem = () => {
                     </div>
                     <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <span className="text-blue-700 font-semibold">Loan Start Date</span>
-                      <span className="font-bold text-gray-900">{loan.startdate ? parseLocalDate(loan.startdate).toLocaleDateString() : 'N/A'}</span>
+                      <span className="font-bold text-gray-900">
+                        {(() => {
+                          const startDateValue = loan.startdate || loan.StartDate || loan.startDate;
+                          return startDateValue ? parseLocalDate(startDateValue).toLocaleDateString() : 'N/A';
+                        })()}
+                      </span>
                     </div>
                     {schedule.length > 0 && paidMonths.length < schedule.length && (
                       <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg border border-purple-200">
