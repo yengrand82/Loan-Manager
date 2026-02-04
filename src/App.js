@@ -1009,7 +1009,7 @@ const LoanManagementSystem = () => {
   };
 
   // Borrower Profile View
-  const BorrowerProfileView = () => {
+  const BorrowerProfileView = ({ onEditBorrower }) => {
     const borrower = selectedBorrower;
     
     // Safety check
@@ -1305,13 +1305,12 @@ const LoanManagementSystem = () => {
                   </h2>
                   <button
                     onClick={() => {
-                      setEditBorrowerForm({
+                      onEditBorrower({
                         name: borrower.name || '',
                         contact: borrower.contact || '',
                         email: borrower.email || '',
                         address: borrower.address || ''
                       });
-                      setShowEditBorrowerModal(true);
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-sm"
                   >
@@ -2656,9 +2655,15 @@ const LoanManagementSystem = () => {
 
   // Main Render
   if (currentView === 'login') return <LoginView />;
-  if (currentView === 'borrower-profile') return <BorrowerProfileView />;
+  if (currentView === 'borrower-profile') return (
+    <BorrowerProfileView 
+      onEditBorrower={(formData) => {
+        setEditBorrowerForm(formData);
+        setShowEditBorrowerModal(true);
+      }}
+    />
+  );
   return <AdminDashboard />;
 };
 
 export default LoanManagementSystem;
-// Force rebuild
