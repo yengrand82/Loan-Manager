@@ -1009,7 +1009,7 @@ const LoanManagementSystem = () => {
   };
 
   // Borrower Profile View
-  const BorrowerProfileView = ({ showEditBorrowerModal, setShowEditBorrowerModal, editBorrowerForm, setEditBorrowerForm, updateBorrower }) => {
+  const BorrowerProfileView = () => {
     const borrower = selectedBorrower;
     
     // Safety check
@@ -2543,7 +2543,7 @@ const LoanManagementSystem = () => {
         {showSettingsModal && <PasswordChangeModal />}
 
         {/* Edit Borrower Modal */}
-        {showEditBorrowerModal && currentView === 'borrower-profile' && (
+        {showEditBorrowerModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
@@ -2656,15 +2656,7 @@ const LoanManagementSystem = () => {
 
   // Main Render
   if (currentView === 'login') return <LoginView />;
-  if (currentView === 'borrower-profile') return (
-  <BorrowerProfileView 
-    showEditBorrowerModal={showEditBorrowerModal}
-    setShowEditBorrowerModal={setShowEditBorrowerModal}
-    editBorrowerForm={editBorrowerForm}
-    setEditBorrowerForm={setEditBorrowerForm}
-    updateBorrower={updateBorrower}
-  />
-);
+  if (currentView === 'borrower-profile') return <BorrowerProfileView />;
   return <AdminDashboard />;
 };
 
