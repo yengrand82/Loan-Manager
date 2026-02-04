@@ -2237,7 +2237,14 @@ const LoanManagementSystem = () => {
     const stats = getStats();
 
     if (selectedBorrower) {
-      return <BorrowerProfileView />;
+      return (
+        <BorrowerProfileView 
+          onEditBorrower={(formData) => {
+            setEditBorrowerForm(formData);
+            setShowEditBorrowerModal(true);
+          }}
+        />
+      );
     }
 
     return (
