@@ -1304,13 +1304,21 @@ const LoanManagementSystem = () => {
                     Contact Information
                   </h2>
                   <button
-                    onClick={() => {
-                      onEditBorrower({
-                        name: borrower.name || '',
-                        contact: borrower.contact || '',
-                        email: borrower.email || '',
-                        address: borrower.address || ''
-                      });
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Edit button clicked - React handler');
+                      if (typeof onEditBorrower === 'function') {
+                        console.log('onEditBorrower is a function, calling it');
+                        onEditBorrower({
+                          name: borrower.name || '',
+                          contact: borrower.contact || '',
+                          email: borrower.email || '',
+                          address: borrower.address || ''
+                        });
+                      } else {
+                        console.error('onEditBorrower is not a function:', typeof onEditBorrower);
+                      }
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-sm"
                   >
@@ -2674,5 +2682,3 @@ const LoanManagementSystem = () => {
 };
 
 export default LoanManagementSystem;
-
-// Force rebuild Tue Feb  3 20:35:42 EST 2026
