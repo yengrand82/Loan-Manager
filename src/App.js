@@ -2544,7 +2544,6 @@ const LoanManagementSystem = () => {
             </>
           )}
         </div>
-        )}
         
         {/* Settings Modal */}
         {showSettingsModal && <PasswordChangeModal />}
