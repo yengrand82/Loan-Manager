@@ -27,6 +27,12 @@ const LoanManagementSystem = () => {
   const [adminPassword, setAdminPassword] = useState('admin'); // Admin password (can be changed)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditBorrowerModal, setShowEditBorrowerModal] = useState(false);
+  const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [newLoanForm, setNewLoanForm] = useState({
+    amount: '',
+    months: '',
+    purpose: ''
+  });
   const [editBorrowerForm, setEditBorrowerForm] = useState({
     name: '',
     contact: '',
@@ -811,6 +817,51 @@ const LoanManagementSystem = () => {
     }
   };
 
+  const submitNewLoanApplication = async () => {
+    if (!newLoanForm.amount || !newLoanForm.months) {
+      alert('Please fill in loan amount and term!');
+      return;
+    }
+
+    const amount = parseFloat(newLoanForm.amount);
+    if (amount <= 0 || amount > 100000) {
+      alert('Loan amount must be between ₱1 and ₱100,000');
+      return;
+    }
+
+    const months = parseInt(newLoanForm.months);
+    if (months < 1 || months > 24) {
+      alert('Loan term must be between 1 and 24 months');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await fetch(GOOGLE_SHEETS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'submitApplication',
+          data: {
+            borrowerId: currentUser.id,
+            borrowerName: currentUser.name,
+            amount: amount,
+            months: months,
+            purpose: newLoanForm.purpose || 'Repeat loan',
+            timestamp: formatLocalDate(new Date())
+          }
+        })
+      });
+
+      alert('✅ Loan application submitted successfully! Please wait for admin approval.');
+      setShowNewLoanModal(false);
+      await loadData(); // Refresh to show new application
+    } catch (error) {
+      alert('Error submitting application: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
     const handlePhotoUpload = (e) => {
       const file = e.target.files[0];
@@ -1256,6 +1307,20 @@ const LoanManagementSystem = () => {
                 <span>Paid: ₱{totalPaid.toLocaleString()}</span>
                 <span>Remaining: ₱{(totalLoan - totalPaid).toLocaleString()}</span>
               </div>
+              
+              {/* Apply for New Loan Button - shown when fully paid */}
+              {progress >= 100 && (
+                <button
+                  onClick={() => {
+                    setNewLoanForm({ amount: '', months: '', purpose: '' });
+                    setShowNewLoanModal(true);
+                  }}
+                  className="mt-4 w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <Plus size={20} />
+                  Apply for New Loan
+                </button>
+              )}
             </div>
           </div>
 
@@ -2233,6 +2298,105 @@ const LoanManagementSystem = () => {
     );
   };
 
+  // New Loan Application Modal (rendered at app level so it's accessible everywhere)
+  const NewLoanModal = () => {
+    if (!showNewLoanModal) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Plus size={24} className="text-green-600" />
+                Apply for New Loan
+              </h2>
+              <button
+                onClick={() => setShowNewLoanModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Loan Amount (₱) *
+                </label>
+                <input
+                  type="number"
+                  value={newLoanForm.amount}
+                  onChange={(e) => setNewLoanForm({...newLoanForm, amount: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="e.g., 5000"
+                  min="1"
+                  max="100000"
+                />
+                <p className="text-xs text-gray-500 mt-1">Maximum: ₱100,000</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Loan Term (Months) *
+                </label>
+                <input
+                  type="number"
+                  value={newLoanForm.months}
+                  onChange={(e) => setNewLoanForm({...newLoanForm, months: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="e.g., 3"
+                  min="1"
+                  max="24"
+                />
+                <p className="text-xs text-gray-500 mt-1">1-24 months</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Purpose (Optional)
+                </label>
+                <textarea
+                  value={newLoanForm.purpose}
+                  onChange={(e) => setNewLoanForm({...newLoanForm, purpose: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="What will you use this loan for?"
+                  rows="3"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowNewLoanModal(false)}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitNewLoanApplication}
+                disabled={loading}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send size={20} />
+                    Submit Application
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Admin Dashboard
   const AdminDashboard = () => {
     const stats = getStats();
@@ -2655,9 +2819,14 @@ const LoanManagementSystem = () => {
   };
 
   // Main Render
-  if (currentView === 'login') return <LoginView />;
-  if (currentView === 'borrower-profile') return <BorrowerProfileView />;
-  return <AdminDashboard />;
+  return (
+    <>
+      {currentView === 'login' && <LoginView />}
+      {currentView === 'borrower-profile' && <BorrowerProfileView />}
+      {currentView !== 'login' && currentView !== 'borrower-profile' && <AdminDashboard />}
+      <NewLoanModal />
+    </>
+  );
 };
 
 export default LoanManagementSystem;
